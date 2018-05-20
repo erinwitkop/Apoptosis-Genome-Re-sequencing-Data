@@ -361,12 +361,105 @@ The final filtered bam files have now been generated and we can check the sequen
 ```
 F=/home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/natural_pop_files
 array1=(ls *.F.bam | sed 's/.F.bam//g')
-for i in ${array1[@]; do
+for i in ${array1[@]}; do
   samtools depth -aa ${i}.F.bam > ${i}.genome.depth
 done
 ```
 
-# Step 8.
+# Step 8. Simple mapping statistics using SAMtools flagstat
+```
+for i in *.F.bam; do
+  samtools flagstat $i
+  echo "done $i flagstat"
+done
+
+```
+# Step 9. Extract Sequences from BAM file using bedtools view to extract reads
+-Helpful tutorial listed here https://davetang.org/wiki/tiki-index.php?page=SAMTools#Creating_FASTQ_files_from_a_BAM_file and bedtools
+bamofastq documentation [here](http://bedtools.readthedocs.io/en/latest/content/tools/bamtofastq.html)
+I do not want to filter out unmapped reads. However, I will process them as two different files.
+The bam files have already been sorted, so we do not need to sort them again.  This script was performed on the bluewaves cluster.
+
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 3
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/fastq_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/fastq_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+echo "START $(date)"
+module load BEDTools/2.26.0-foss-2016b
+
+for i in *.F.bam; do
+        bedtools bamtofastq -i $i -fq $i.fq
+        echo "done $i"
+done
+
+echo "done $(date)"
+```
+Finally, to perform an HMMSearch we need to convert each fastq format sequence to a fasta file via command line. HMMsearch will only take .fasta format files as input.
+
+```
+for i in *.F.bam.fq; do
+  paste - - - - < $i | cut -f 1,2 | sed 's/^@/>/' | tr "\t" "\n" > $i.fa
+  echo "done $i convert"
+done 
+```
+
+
+
+# Step 9. Use HMMER Search to identify GIMAP and IAP sequences with characteristic AIG conserved domain in each population
+
+Next we will create our HMM index with the AIG1 conserved domain characteristic of GIMAP. Then we will perform an HMMSearch with the files.
+
+```
+#!/bin/bash
+#SBATCH -t 1:00:00
+#SBATCH --nodes 1
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/GIMAP_hmmer_out
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/GIMAP_hmmer_out
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+#-D submits the start path
+echo "START $(date)"
+
+module load HMMER/3.1b2-foss-2016b
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+#Step 1: build a profile HMM with hmmbuild
+#input file as Stockholm or FASTA alignments
+#It expects Stockholm by default. To read aligned FASTA files, which HMMER calls “afa” format,
+#specify --informat afa on the command line of any program that reads an input alignment
+
+#Use first line of code if in mfasta format, index aleady built
+#hmmbuild --informat afa $F/GIMAP.hmm $F/GIMAP_CDD.fasta
+#hmmbuild $F/GIMAP.hmm $F/GIMAPP_CDD.fasta
+
+#Search sequence database with hmmsearch
+#hmmsearch accepts any FASTA file as input. It also accepts EMBL/Uniprot text format.It will automatically determine what format your file is in; you don’t have to say.
+#We want to extract full length	sequences that that contain one	or more	HMMERhits. First save as tabular output, then use esl-sfetch to	gather sequences
+
+for i in *.F.bam.fq.fa; do
+        hmmsearch --tblout $F/$i_GIMAP_hits.tbl $F/GIMAP.hmm $F/$i
+        grep -v "^#" $i_GIMAP_hits.tbl | awk '{print $1}' | esl-sfetch -f $i - > $F/$i_GIMAP_hmmer_search.fa
+done
+
+echo "Done $(date)"
+
+#note, esl-sfetch is already included as part of the HMMER application library
+
+```
+
+Now we will repeat the same code but perform an HMMSearch using the IAP conserved domain sequence
+
+
+
+# Step 10: Compare GIMAP and IAP from each individual population
 
 
 # Works Cited
