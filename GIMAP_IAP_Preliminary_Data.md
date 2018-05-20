@@ -22,7 +22,11 @@ set includes data from 14 different populations from both wild and selected line
 |7. Calcasieu Lake (CL) | Louisiana      | Grand Isle, LA                             | NA            | Wild          |
 |8. Chlora's Point (CLP)| Chesapeake Bay | Choptank River- Chesapeake Bay, VA         | Low salinity  | Wild          |
 |9. Hummock Cove (HC-VA)| Chesapeake Bay | Chesapeake Bay, VA                         | High salinity | Wild          |
-
+|10. OBOYS2             | Louisiana      | Calcasieu Lake, LA                         | NA            | Selected      |
+|11. DEBY               | Virginia       | York River, VA                             | Selected-High | Selected      |
+|12. LOLA               | Virginia       | Unknown                                    | Selected-Low  | Selected      |
+|13. NEH93 (NEH)        | Delaware Bay   | Unknown                                    | Selected      | Selected      |
+|14. UMFS               | Maine          | Unknown                                    | Selected      | Selected      |
 
 # Step 1: Download and acquire the Data
 
@@ -158,7 +162,7 @@ This graph depicts the number of reads with average quality scores.
 6. Per Sequence GC Content
 
 This graph depicts the average GC contents of reads and is roughly normally distributed.
-![Per Sequence GC Content](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Per_Sequence_GC_Content.png"This graph depicts the average GC contents of reads and is roughly normally distributed")
+![Per Sequence GC Content](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Per_Sequence_GC_Content.png" This graph depicts the average GC contents of reads and is roughly normally distributed")
 
 
 Overall the sequence quality is high and we will proceed with further analysis.
