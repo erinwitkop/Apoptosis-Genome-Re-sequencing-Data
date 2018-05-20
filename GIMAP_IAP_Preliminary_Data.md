@@ -162,7 +162,7 @@ This graph depicts the number of reads with average quality scores.
 6. Per Sequence GC Content
 
 This graph depicts the average GC contents of reads and is roughly normally distributed.
-![Per Sequence GC Content](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Per_Sequence_GC_Content.png" This graph depicts the average GC contents of reads and is roughly normally distributed")
+![Per Sequence GC Content](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Per_Sequence_GC_Content.png "This graph depicts the average GC contents of reads and is roughly normally distributed")
 
 
 Overall the sequence quality is high and we will proceed with further analysis.
