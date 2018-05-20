@@ -80,7 +80,8 @@ Use FASTQC to create FASTQC report with:
   f. Per sequence GC content
 
 The following commands were all repeated for the selected_pop files from DEBY, LOLA, HG, NEH, OBOYS2, NG
-  ```
+
+```
 # Upload FASTQC environment using conda create
 conda create -n natural_pop_files fastqc
 
@@ -113,15 +114,6 @@ done
 bg
 disown -a
 
-# Check that all files have been completed by comparing arrays with bash
-declare -a total_array=(./LM*.F.fq.gz ./HC_?.F.fq.gz ./CS*.F.fq.gz ./SM*.F.fq.gz ./HI*.F.fq.gz ./SL*.F.fq.gz ./CL_*.F.fq.gz ./CLP*.F.fq.gz ./HC_VA*.F.fq.gz ./LM*.R.fq.gz ./HC_?.R.fq.gz ./CS*.R.fq.gz ./SM*.R.fq.gz ./HI*.R.fq.gz ./SL*.R.fq.gz ./CL_*.R.fq.gz ./CLP*.R.fq.gz ./HC_VA*.R.fq.gz)
-for i in ${total_array[@]}; do
-  echo ${i} | sed 's/.fq.gz/_fastqc.html/g' >> total_array.txt
-done
-declare -a total_array=($(cat total_array.txt))
-declare -a html_array=(./*.html)
-echo ${total_array[@]} ${html_array[@]} | tr ' ' '\n' | sort | uniq -u #any left over are those that weren't converted to fastqc
-# Failed to process file HI_2.R.fq.gz. This file is excluded from FASTQC analysis
 
 #Code used for selected population files
 #!/bin/bash
@@ -151,26 +143,25 @@ scp -P 2292 eroberts@kitt.uri.edu:/home/eroberts/repos/BIO_594_2018/FinalAssignm
 
 1. GC content: The GC content was either 35% or 36% across all reads.
 2. % failed: None failed the QC report
-3. % Duplicates: The highest percent duplicates was 12.5%. Most were lower than this.
-4. Mean Quality Score: 105/105 Samples Passed
+3. % Duplicates: The highest percent duplicates was 14.8%. Most were lower than this.
+4. Mean Quality Score: 167/167 Samples Passed
 
-## MultiQC for all Populations
+## MultiQC for data from all Populations
 This graph depicts the mean quality score at each position across a read.
-![Mean Quality Score](https://github.com/jpuritz/BIO_594_2018/blob/master/FinalAssignment/EMR_Final_Assignment/Mean_quality_histogram_natural_pops_5_3_18.png "This graph depicts the mean quality score at each position across a read.")
+![Mean Quality Score](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Sequence_Quality_Histogram.png "This graph depicts the mean quality score at each position across a read.")
 
-5. Per Sequence Quality Score: 105/105 Samples Passed
+5. Per Sequence Quality Score: All Samples Passed
 
 This graph depicts the number of reads with average quality scores.
-![Per Sequence Quality Score](https://github.com/jpuritz/BIO_594_2018/blob/master/FinalAssignment/EMR_Final_Assignment/Per_sequence_quality_scores_natural_pops_5_3_18.png "This graph depicts the number of reads with average quality scores.")
+![Per Sequence Quality Score](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Per_Sequence_Quality_Score.png "This graph depicts the number of reads with average quality scores.")
 
 6. Per Sequence GC Content
 
 This graph depicts the average GC contents of reads and is roughly normally distributed.
-![Per Sequence GC Content](https://github.com/jpuritz/BIO_594_2018/blob/master/FinalAssignment/EMR_Final_Assignment/Per_sequence_GC_content_natural_pops_5_3_18.png "This graph depicts the average GC contents of reads and is roughly normally distributed")
+![Per Sequence GC Content](https://github.com/erinroberts/Apoptosis-Genome-Re-sequencing-Data/blob/master/CV_Gen_Reseq_Per_Sequence_GC_Content.png"This graph depicts the average GC contents of reads and is roughly normally distributed")
 
 
 Overall the sequence quality is high and we will proceed with further analysis.
-
 
 #### Step 4: Bioinformatic Processing
 
@@ -188,6 +179,7 @@ These sequences were input into a file called Hi_seq_adaptors.fa.
 
 
 Install the software fastqc-mcf (from the ea-utils package)
+
 ```
 #install ea-utils
 conda install -c bioconda ea-utils
@@ -220,6 +212,34 @@ done'
 # -x = 'N' bad read percentage causing cycle removal
 
 ```
+Get list of unique selected population file prefixes with the following code.
+```
+cat list | sed 's/\..*$//' | uniq | sed 's/\(.*\)/\"\1\"/'
+```
+
+Run the following script to perform read processing as above
+```
+#!/bin/bash
+conda install -c bioconda ea-utils
+
+sh -c 'for file in "DEBY_1" "DEBY_2" "DEBY_3" "DEBY_4" "DEBY_5" "DEBY_6" "HG_HG0F2" "HG_HG2F1" "HG_HG2M5" "LOLA_1" "LOLA_2" "LOLA_3" "LOLA_4" "LOLA_5" "LOLA_6" "NEH_1" "NEH_2" "NEH_3" "NEH_4" "NEH_5" "NEH_6" "NG_NH0H4" "NG_NH2F6" "NG_NH2F8" "NG_NH2M1" "OBOYS2_1" "OBOYS2_2" "OBOYS2_3" "OBOYS2_4" "OBOYS2_5" "OBOYS2_6"
+do
+echo "start ${file} $(date)"
+/home/eroberts/miniconda3/bin/fastq-mcf \
+/home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/natural_pop_files/Hi_seq_adaptors.fa \
+/home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/selected_pop/${file}.F.fq.gz \
+/home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/selected_pop/${file}.R.fq.gz \
+-l 100 \
+-q 20 \
+-w 5 \
+-x 10 \
+-u \
+-P 33 \
+-o /home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/selected_pop/${file}.F.cleaned.fq.gz \
+-o /home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/selected_pop/${file}.R.cleaned.fq.gz &> /home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/selected_pop/${file}.log
+echo "${file} done $(date)"
+done'
+```
 
 # Step 5. Read Mapping to Reference using BWA-MEM
 BWA-MEM is recommended for longer sequences that range from 70bp to 1Mbp. It is recommended over BWA-SW and BWA-backtrak because it is faster and more accurate.
@@ -240,6 +260,7 @@ Create a bwa index for use by BWA and then use bwa mem to generate sam records f
 Put the following code into a bash script and run the bash script to execute.
 $ nano bwa.sh
 $ bash bwa.sh
+
 ```
 #!/bin/bash
 F=/home/eroberts/repos/BIO_594_2018/FinalAssignment/EMR_Final_Assignment/natural_pop_files
@@ -279,7 +300,7 @@ done
 
 echo "done $(date)"
 
-#initially received error: Exception in thread "main" picard.PicardException: Found a samRecordWithOrdinal with sufficiently large clipping that we may have
+# initially received error: Exception in thread "main" picard.PicardException: Found a samRecordWithOrdinal with sufficiently large clipping that we may have
  missed including it in an early duplicate marking iteration.  Please increase the minimum distance to at least 302bp
 to ensure it is considered (was 300), so the minimum distance was increased.
 ```
@@ -341,7 +362,12 @@ for i in ${array1[@]; do
 done
 ```
 
+# Step 8.
+
+
 # Works Cited
+
+https://github.com/jpuritz/BIO_594_2018/blob/master/Exercises/Week10/EecSeq_code.md
 
 MultiQC: Summarize analysis results for multiple tools and samples in a single report
 Philip Ewels, Måns Magnusson, Sverker Lundin and Max Käller
