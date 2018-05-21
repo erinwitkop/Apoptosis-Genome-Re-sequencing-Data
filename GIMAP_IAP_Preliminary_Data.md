@@ -539,6 +539,7 @@ Preliminary Analysis of annotated GIMAP genes in the Reference Genome (.gff) rev
 53 total GIMAP genes.
 
 Table 1: Summarized GIMAP Gene Data for the Reference Annotation
+
 | Total GIMAP Genes | 53 |
 |-------------------|----|
 | GIMAP4            | 42 |
@@ -546,6 +547,7 @@ Table 1: Summarized GIMAP Gene Data for the Reference Annotation
 | GIMAP8            | 2  |
 
 Table 2: GIMAP Genes Per Chromosome in Eastern Oyster Reference Annotation
+
 | Chromosome | Number of Total Genes | Number of GIMAP 4 | Number of GIMAP 7 | Number of GIMAP 8 |
 |------------|-----------------------|-------------------|-------------------|-------------------|
 | CHR2       | 3                     | 1                 | 0                 | 2                 |
