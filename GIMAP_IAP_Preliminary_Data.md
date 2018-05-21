@@ -558,10 +558,19 @@ Table 2: GIMAP Genes Per Chromosome in Eastern Oyster Reference Annotation
 | CHR8       | 25                    | 18                | 7                 | 0                 |
 | CHR9       | 8                     | 6                 | 2                 | 0                 |
 
-Next the coordinates for the GIMAP genes in the reference annotation were analyzed. For subsetting the sequences from the chromosomes, a window of 100mb were taken on either side.
+Next the coordinates for the GIMAP genes in the reference annotation were analyzed. For subsetting the sequences from the chromosomes, a window of 1mb was extracted on either side.
 
 Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 
+| Chromosome ID | Chromosome Number | Start    | End       | Extracted Range    |
+|---------------|-------------------|----------|-----------|--------------------|
+| NC_035781.1   | CHR2              | 42704802 | 42757768  | 43704802-43757768  |
+| NC_035783.1   | CHR4              | 40487217 | 41243082  | 41487217-42243082  |
+| NC_035784.1   | CHR5              | 89744459 | 89751167  | 90744459-90751167  |
+| NC_035785.1   | CHR6              | 12854692 | 12928162  | 13854692-13928162  |
+| NC_035786.1   | CHR7              | 14027963 | 54588883  | 15027963-55588883  |
+| NC_035787.1   | CHR8              | 5914739  | 71430550  | 6914739-72430550   |
+| NC_035788.1   | CHR9              | 29445429 | 103317686 | 30445429-104317686 |
 
 1. Now we can use samtools to extract these coordinates for the GIMAP Sequences
 -
