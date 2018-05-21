@@ -354,7 +354,8 @@ Below is a sample output of checking whether duplicates have been removed: This 
 40905430	34076692
 ```
 
-# STEP 7. Calculate depth per bp along the reference using samtools
+# STEP 7. Mapping statistics with Samtools
+1. Calculate depth per bp along the reference using samtools
 
 The final filtered bam files have now been generated and we can check the sequencing depth per base pair. The output is a text file with three columns. The first column lists the chromosome, the second column is the base pair and the third column is the depth at that base pair.
 
@@ -366,7 +367,7 @@ for i in ${array1[@]}; do
 done
 ```
 
-# Step 8. Simple mapping statistics using SAMtools flagstat
+2.  Simple mapping statistics using SAMtools flagstat
 ```
 for i in *.F.bam; do
   samtools flagstat $i
@@ -374,100 +375,211 @@ for i in *.F.bam; do
 done
 
 ```
-# Step 9. Extract Sequences from BAM file using bedtools view to extract reads
--Helpful tutorial listed here https://davetang.org/wiki/tiki-index.php?page=SAMTools#Creating_FASTQ_files_from_a_BAM_file and bedtools
-bamofastq documentation [here](http://bedtools.readthedocs.io/en/latest/content/tools/bamtofastq.html)
-I do not want to filter out unmapped reads. However, I will process them as two different files.
-The bam files have already been sorted, so we do not need to sort them again.  This script was performed on the bluewaves cluster.
+# STEP 8. Perform Variant Calling with FreeBayes,
 
+Now that our final .bam files have been generated we can call variants using the program FreeBayes. Variants can be called for files individually or jointly.
+
+```
+ls *.F.bam > bamlist.txt
+```
 ```
 #!/bin/bash
-#SBATCH -t 100:00:00
-#SBATCH --nodes 3
-#SBATCH --exclusive
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/fastq_output
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/fastq_error
-#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
-cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+#give FreeBayes a list of all the input files and call them jointly
+freebayes -f GCA_002022765.4_C_virginica-3.0_genomic.fna -L bamlist.txt >  total_SNPs_ALLPOP.vcf
+echo "done variant $(date)"
+```
 
-echo "START $(date)"
-module load BEDTools/2.26.0-foss-2016b
+# STEP 9. Filter SNPs using VCFTools
 
-for i in *.F.bam; do
-        bedtools bamtofastq -i $i -fq $i.fq
-        echo "done $i"
+The following steps were adapted from an excellent protocol developed by Jon Puritz. For more detailed information please see [http://ddocent.com/filtering/](http://ddocent.com/filtering/)
+
+1. First we will use VCFTools to filter out any variants that have not been successfully genotyped to more than 50% of individuals ( `--max-missing 0.5`), those with a minor allele count of 3 (`--mac 3)`), and those with a quality score below 30 (`--minQ 30`)  
+
+```
+vcftools --vcf total_ALLPOP.vcf --max-missing 0.5 --mac 3 --minQ 20 --recode --recode-INFO-all --out total_ALLPOP.g5mac3
+
+```
+
+2. Getting rid of these first will help speed up this next command, which applies a minimum mean depth and a minimum depth for a genotype call. Genotypes will be called if they have atleast three reads.
+
+```
+vcftools --vcf total_ALLPOP.firstfilter.recode.vcf --minDP 3 --recode --recode-INFO-all --out total_ALLPOP.g5mac3dp3
+```
+
+3. Now we can remove individuals that have a lot of missing data.
+
+```
+# The output of this file will be called out.imiss
+vcftools --vcf total_ALLPOP.g5mac3dp3.recode.vcf --missing-indv
+
+```
+4. We can now plot a histogram of individuals that are missing a lot of data using the following command (taken from http://ddocent.com/filtering/ by Jon Puritz).
+
+```
+mawk '!/IN/' out.imiss | cut -f5 > totalmissing
+gnuplot << \EOF
+set terminal dumb size 120, 30
+set autoscale
+unset label
+set title "Histogram of % missing data per individual"
+set ylabel "Number of Occurrences"
+set xlabel "% of missing data"
+#set yr [0:100000]
+binwidth=0.01
+bin(x,width)=width*floor(x/width) + binwidth/2.0
+plot 'totalmissing' using (bin($1,binwidth)):(1.0) smooth freq with boxes
+pause -1
+EOF
+```
+5. We can create a list with more than 50% missing data using the following mawk command.
+```
+mawk '$5 > 0.5' out.imiss | cut -f1 > lowDP.indv
+```
+6. This can then be piped into VCFtools so that the low coverage individuals can be removed.
+```
+vcftools --vcf total_ALLPOP.g5mac3dp3.recode.vcf --remove lowDP.indv --recode --recode-INFO-all --out total_ALLPOP.g5mac3dp3dplm
+
+```
+7. Next, we need to restrict the data to those variants that are called in a high percentage of individuals using a genotype call rate of 95% (`--max-missing 0.95`) and then filter based on the mean depth of genotypes of 20% (`--min-meanDP 20`).
+```
+vcftools --vcf total_ALLPOP.g5mac3dp3dplm.recode.vcf --max-missing 0.95 --maf 0.05 --recode --recode-INFO-all --out total_ALLPOPDP3g95maf05 --min-meanDP 20
+```
+
+8. Finally, because we are analyzing several individuals, we need to apply a population specific filter. To do this we first need to create what's called a "popmap" file. This file contains two tab separated columns. Lets create one based on our data.
+
+```
+array2=($(ls *.F.cleaned.fq.gz | sed 's/.F.cleaned.fq.gz//g'))
+
+for i in ${array2[@]}; do
+  echo -e "${i}:${i}" | awk  '{gsub(":","\t",$0); print;}' >> popmap
 done
+awk '{split($2,a,/_/);$2=a[1]}1' popmap > popmap_final  
+sed 's/ /\t/g' popmap_final > popmap_final_TD
 
-echo "done $(date)"
+#note: manually added _VA to HC_VA lines using nano
 ```
-Finally, to perform an HMMSearch we need to convert each fastq format sequence to a fasta file via command line. HMMsearch will only take .fasta format files as input.
-
-```
-for i in *.F.bam.fq; do
-  paste - - - - < $i | cut -f 1,2 | sed 's/^@/>/' | tr "\t" "\n" > $i.fa
-  echo "done $i convert"
-done 
-```
-
-
-
-# Step 9. Use HMMER Search to identify GIMAP and IAP sequences with characteristic AIG conserved domain in each population
-
-Next we will create our HMM index with the AIG1 conserved domain characteristic of GIMAP. Then we will perform an HMMSearch with the files.
+8a. Now we need to create 9 lists that have the individual names of each population. We can do this with the following commands that can be used for whatever the unique names of your populations might be.
 
 ```
+cut -f 2 popmap_final_TD | sort | uniq > unique.txt
+
 #!/bin/bash
-#SBATCH -t 1:00:00
-#SBATCH --nodes 1
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/GIMAP_hmmer_out
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/GIMAP_hmmer_out
-#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq
+while read -r i; do
+  echo $i > $i.keep
+done < unique.txt
 
-#-D submits the start path
-echo "START $(date)"
-
-module load HMMER/3.1b2-foss-2016b
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-
-#Step 1: build a profile HMM with hmmbuild
-#input file as Stockholm or FASTA alignments
-#It expects Stockholm by default. To read aligned FASTA files, which HMMER calls “afa” format,
-#specify --informat afa on the command line of any program that reads an input alignment
-
-#Use first line of code if in mfasta format, index aleady built
-#hmmbuild --informat afa $F/GIMAP.hmm $F/GIMAP_CDD.fasta
-#hmmbuild $F/GIMAP.hmm $F/GIMAPP_CDD.fasta
-
-#Search sequence database with hmmsearch
-#hmmsearch accepts any FASTA file as input. It also accepts EMBL/Uniprot text format.It will automatically determine what format your file is in; you don’t have to say.
-#We want to extract full length	sequences that that contain one	or more	HMMERhits. First save as tabular output, then use esl-sfetch to	gather sequences
-
-for i in *.F.bam.fq.fa; do
-        hmmsearch --tblout $F/$i_GIMAP_hits.tbl $F/GIMAP.hmm $F/$i
-        grep -v "^#" $i_GIMAP_hits.tbl | awk '{print $1}' | esl-sfetch -f $i - > $F/$i_GIMAP_hmmer_search.fa
-done
-
-echo "Done $(date)"
-
-#note, esl-sfetch is already included as part of the HMMER application library
+```  
+8b. We can use these files to estimate the missing data for loci in each population using vcftools.
 
 ```
+array3=($(ls *.keep | sed 's'/.keep//')
+for i in ${array3[@]}; do
+  vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --keep ${i}.keep --missing-site --out ${i}
+done
+```
+8c. The output of the above commands outputs files called `*.lmiss` whose last column lists the percentage of missing data for that locus. We can merge all of these files to create a list of loci that have 10% missing data or more to remove.
 
-Now we will repeat the same code but perform an HMMSearch using the IAP conserved domain sequence
+```
+cat CL.lmist CLP.lmiss CS.lmiss HC.lmiss HC_VA.lmiss HI.lmiss LM.lmiss SL.lmiss SM.lmiss | mawk '!/CHR/' | mawk '$6 > 0.1' | cut -f1,2 >> badloci
+
+```
+8d. Finally, we can pipe this back into VCFTools to remove any of those bad loci
+
+```
+vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --exclude-positions badloci --recode --recode-INFO-all --out total_ALLPOP.DP3g95p5maf05
+
+```
+9. Next we can apply a filter that remove sites that have reads from both strands. The filter command is going to keep loci that have over 100 times more forward alternate reads than reverse alternate reads and 100 times more forward reference reads than reverse reference reads along with the reciprocal.
+
+```
+vcffilter -f "SAF / SAR > 100 & SRF / SRR > 100 | SAR / SAF > 100 & SRR / SRF > 100" -s total_ALLPOP.DP3g95p5maf05.recode.vcf > total_ALLPOP.DP3g95p5maf05.fil1.vcf
+
+# To investigate how many reads were remove we can see how many lines remain
+mawk '!/#/' total_ALLPOP.DP3g95p5maf05.fil1.vcf | wc -l
+
+```
+10. Apply a filter to account for high coverage causing an inflated locus quality score
+
+Heng Li found that in whole genome samples, high coverage can lead to inflated locus quality scores. Based on this, Jon Puritz suggests the following filter to remove any locus that has a quality score below 1/4 of the depth. Because we are not working with RADseq data, we will not implement the second filter he suggest to recalculate mean depth.
+
+```
+vcffilter -f "QUAL / DP > 0.25" total_ALLPOP.DP3g95p5maf05.fil1.vcf > total_ALLPOP.DP3g95p5maf05.fil2.vcf
+```
+
+11. Apply a filter for HWE
+
+Hardy Weinberg equilibrium is also another excellent filter to remove erroneous variant calls. To do this I will implement a script written by Chris Hollenbeck
+
+```
+curl -L -O https://github.com/jpuritz/dDocent/raw/master/scripts/filter_hwe_by_pop.pl
+chmod +x filter_hwe_by_pop.pl
+```
+We can first filter by population specific HWE. To do this we need to convert our variant calls to SNPS using vcflib. The following command will do that for us.
+
+```
+vcfallelicprimitives total_ALLPOP.DP3g95p5maf05.fil2.vcf --keep-info --keep-geno > SNP.total_ALLPOP.DP3g95p5maf05.fil2.prim.vcf
+```
+
+Next, the command below will split the variant calls into SNP and indel genotypes.
+```
+vcftools --vcf SNP.total_ALLPOP.DP3g95p5maf05.fil2.prim.vcf --remove-indels --recode --recode-INFO-all --out SNP.DP3g95p5maf05
+```
+
+Now we can apply a SNP filter. We will choose to use the default Hardy Weinberg p-value of 0.001.
+
+```
+./filter_hwe_by_pop.pl -v SNP.DP3g95p5maf05.recode.vcf -p popmap_final_TD -o SNP.DP3g95p5maf05.HWE -h 0.001
+```
+
+We now have our final filtered SNP calls that we are confident about!
+
+# STEP 10: Isolate Chromosomes of Interest based on Previous knowledge of Gene Family Structure
+
+Preliminary Analysis of annotated GIMAP genes in the Reference Genome (.gff) reveal
+53 total GIMAP genes.
+
+Table 1: Summarized GIMAP Gene Data for the Reference Annotation
+| Total GIMAP Genes | 53 |
+|-------------------|----|
+| GIMAP4            | 42 |
+| GIMAP7            | 9  |
+| GIMAP8            | 2  |
+
+Table 2: GIMAP Genes Per Chromosome in Eastern Oyster Reference Annotation
+| Chromosome | Number of Total Genes | Number of GIMAP 4 | Number of GIMAP 7 | Number of GIMAP 8 |
+|------------|-----------------------|-------------------|-------------------|-------------------|
+| CHR2       | 3                     | 1                 | 0                 | 2                 |
+| CHR4       | 5                     | 5                 | 0                 | 0                 |
+| CHR5       | 1                     | 1                 | 0                 | 0                 |
+| CHR6       | 1                     | 1                 | 0                 | 0                 |
+| CHR7       | 10                    | 10                | 0                 | 0                 |
+| CHR8       | 25                    | 18                | 7                 | 0                 |
+| CHR9       | 8                     | 6                 | 2                 | 0                 |
+
+Next the coordinates for the GIMAP genes in the reference annotation were analyzed. For subsetting the sequences from the chromosomes, a window of 100mb were taken on either side.
+
+Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 
 
+1. Now we can use samtools to extract these coordinates for the GIMAP Sequences
+-
 
-# Step 10: Compare GIMAP and IAP from each individual population
+2. Perform Copy Number Variant Analysis on those subsetted sequence
+
+3. Use FreeBayes SNP calling file to also look at those regions and compare the SNPs within them
+
+4. Perform PCA to look at how the copy number variants cluster in the different populations
 
 
 # Works Cited
 
 https://github.com/jpuritz/BIO_594_2018/blob/master/Exercises/Week10/EecSeq_code.md
+https://bpa-csiro-workshops.github.io/btp-manuals-md/modules/cancer-module-snv/snv/
 
 MultiQC: Summarize analysis results for multiple tools and samples in a single report
 Philip Ewels, Måns Magnusson, Sverker Lundin and Max Käller
 Bioinformatics (2016)
 doi: 10.1093/bioinformatics/btw354
 PMID: 27312411
+
+https://www.biostars.org/p/75489/
