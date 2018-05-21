@@ -250,6 +250,8 @@ BWA-MEM is recommended for longer sequences that range from 70bp to 1Mbp. It is 
 
 The reference file being used is the eastern oyster reference mRNA from NCBI: GCF_002022765.2_C_virginica-3.0_rna.fna. Using this file means that any aligned genes will have the gene information attached.
 
+From here down the codes are only presented for the natural population files. The same analysis was repeated for the selected populations. 
+
 1. Set up a reference index using samtools faidx
 
 ```
