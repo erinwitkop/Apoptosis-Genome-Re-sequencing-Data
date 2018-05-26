@@ -250,7 +250,7 @@ BWA-MEM is recommended for longer sequences that range from 70bp to 1Mbp. It is 
 
 The reference file being used is the eastern oyster reference mRNA from NCBI: GCF_002022765.2_C_virginica-3.0_rna.fna. Using this file means that any aligned genes will have the gene information attached.
 
-From here down the codes are only presented for the natural population files. The same analysis was repeated for the selected populations. 
+From here down the codes are only presented for the natural population files. The same analysis was repeated for the selected populations.
 
 1. Set up a reference index using samtools faidx
 
@@ -575,9 +575,134 @@ Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 | NC_035788.1   | CHR9              | 29445429 | 103317686 | 30445429-104317686 |
 
 1. Now we can use samtools to extract these coordinates for the GIMAP Sequences
--
 
-2. Perform Copy Number Variant Analysis on those subsetted sequence
+#first we will extract the appropriate ranges and put them all in one file
+
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 3
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+echo "START $(date)"
+module load SAMtools/1.5-foss-2017a
+
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=(ls *.F.bam | sed 's/.F.bam//g')
+for i in ${array1[@]}; do
+  samtools view ${i}.F.bam NC_035781.1:43704802-43757768 > $F/${i}.GIMAP.subset.bam
+  samtools view ${i}.F.bam NC_035783.1:41487217-42243082 >> $F/${i}.GIMAP.subset.bam
+  samtools view ${i}.F.bam NC_035784.1:90744459-90751167 >> $F/${i}.GIMAP.subset.bam
+  samtools view ${i}.F.bam NC_035785.1:13854692-13928162 >> $F/${i}.GIMAP.subset.bam
+  samtools view ${i}.F.bam NC_035786.1:15027963-55588883 >> $F/${i}.GIMAP.subset.bam
+  samtools view ${i}.F.bam NC_035787.1:6914739-72430550 >> $F/${i}.GIMAP.subset.bam
+  samtools view ${i}.F.bam NC_035788.1:30445429-104317686 >> $F/${i}.GIMAP.subset.bam
+  echo "done ${i}"
+done
+
+echo "done ${i}"
+
+```
+
+2. Perform Copy Number Variant Analysis on those subsetted sequences using LUMPY and BICSeq2
+
+LUMPY will be used to detect structural variants and BIC-Seq2 will be used to look at copy number variants.
+
+Analyses were structured based on Greer et al., 2017.
+
+"Using the conventional WGS data as input, tumor SVs were detected using LumPy and somatic copy number variants (CNVs) were detected using BICseq2 [26, 27]. LumPy was run using the lumpyexpress executable with default parameters, and the output VCF file was parsed to bed format for further processing. For copy number call- ing, BICseq2 first removes potential biases from the se- quencing data (BICseq2-norm v0.2.4) and subsequently calls CNVs from the normalized data (BICseq2-seg v0.7.2). The lambda parameter supplied to BICseq2-seg tunes the smoothness of the resulting CNV profile; a lambda value of 30 was used to call CNVs for the primary tumor and metastatic samples. Amplifications and deletions were called as segments with tumor/normal copy number ratios greater than 1.25 and less than 0.95, respectively.
+
+Tutorial with LUMPY to find structural variants: http://bioinformatics-ca.github.io/bioinformatics_for_cancer_genomics_2016/rearrangement, https://mississippi.snv.jussieu.fr/u/drosofff/w/constructed-lumpy-workflow-imported-from-uploaded-file,
+http://ngseasy.readthedocs.io/en/latest/containerized/ngseasy_dockerfiles/ngseasy_lumpy/README/
+
+First we will prepare the data for LUMPY input by making BAM files with only discordant read pairs and split reads. Discordant read pairs are those that do not map as expected (and may be variants). Remembers these reads must first be sorted in a bam file. Next we will create a bam file containing only split reads that were mapped with a large insertion or deletion in the alignment.  
+
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 3
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/discordant_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/discordant_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+echo "START $(date)"
+module load SAMtools/1.5-foss-2017a
+
+#extract only discordant read pairs
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=(ls *.F.bam | sed 's/.F.bam//g')
+for i in ${array1[@]}; do
+  samtools view -b -F 1294 ${i}.GIMAP.subset.bam > ${i}.discordants.bam
+done
+
+# Make a bam file that only has split read pairs
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=(ls *.F.bam | sed 's/.F.bam//g')
+  samtools view -h ${i}.bam | ~/CourseData/CG_data/Module3/scripts/extractSplitReads_BwaMem -i stdin | samtools view -Sb - > ${i}.sr.bam
+done
+
+# Determine the distribution of paired end fragment sized
+# We don't need to skip the first million reads because we subsetted the file so drastically to begin with
+# This script will display the mean and stdev to the screen
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=(ls *.F.bam | sed 's/.F.bam//g')
+  samtools view ${i}.F.bam | $F/pairend_distro.py -r 150 -X 4 -o ${i}.lib1.histo
+done
+
+#  IF there is a glitch with these, make sure you check that all files are correctly position sorted
+#python check_sorting.py \
+
+
+```
+
+Now we can finally run the LUMPY command. 
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 3
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+module load BEDTools/2.26.0-foss-2016b
+#need BEDtools to be downloaded in order to view the output
+module load LUMPY/0.2.13-foss-2016b
+
+
+#this command will run LUMPY with both paired end and split reads
+#pe indicates paired end options
+# sr indicates split read options
+# default parameters recommended by the writers will be used
+# min_non_overlap set to the read lenght
+
+
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=(ls *.F.bam | sed 's/.F.bam//g')
+for i in ${array1[@]}; do
+    lumpy \
+        -mw 4 \
+        -tt 0.0 \
+        -pe \
+        id:${i},bam_file:${i}.bam.discordant.pe.bam,histo_file:GIMAP.pe.histo,mean:500,stdev:50,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
+        -sr \
+        bam_file:${i}.sr.sort.bam,back_distance:20,weight:1,id:2,min_mapping_threshold:20 \
+        > ${i}.pesr.bedpe
+done
+
+```
+
+
 
 3. Use FreeBayes SNP calling file to also look at those regions and compare the SNPs within them
 
@@ -588,11 +713,18 @@ Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 
 https://github.com/jpuritz/BIO_594_2018/blob/master/Exercises/Week10/EecSeq_code.md
 https://bpa-csiro-workshops.github.io/btp-manuals-md/modules/cancer-module-snv/snv/
+https://davetang.org/wiki/tiki-index.php?page=SAMTools#Creating_FASTQ_files_from_a_BAM_file
+http://bioinformatics-ca.github.io/bioinformatics_for_cancer_genomics_2016/rearrangement
+https://bcbio.wordpress.com/tag/lumpy/
+http://ngseasy.readthedocs.io/en/latest/containerized/ngseasy_dockerfiles/ngseasy_lumpy/README/
+https://mississippi.snv.jussieu.fr/u/drosofff/w/constructed-lumpy-workflow-imported-from-uploaded-file
 
 MultiQC: Summarize analysis results for multiple tools and samples in a single report
 Philip Ewels, Måns Magnusson, Sverker Lundin and Max Käller
 Bioinformatics (2016)
 doi: 10.1093/bioinformatics/btw354
 PMID: 27312411
+
+Greer, S. U., L. D. Nadauld, B. T. Lau, J. Chen, C. Wood-Bouwens, J. M. Ford, C. J. Kuo, and H. P. Ji. 2017. Linked read sequencing resolves complex genomic rearrangements in gastric cancer metastases. Genome Med. 9:1–17.
 
 https://www.biostars.org/p/75489/
