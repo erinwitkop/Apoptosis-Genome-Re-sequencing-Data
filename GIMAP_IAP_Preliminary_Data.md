@@ -617,8 +617,8 @@ done
 # Finally, we need to make sure that all of the files are position sorted
 array1=($(ls *.F.bam | sed 's/.F.bam//g'))
 for i in ${array1[@]}; do
-  samtools sort ${i}.discordants.bam sample.discordants.pe.sort
-  samtools sort ${i}.sr.bam ${i}.sr.sort
+  samtools sort ${i}.discordants.bam -o ${i}.discordants.pe.sort
+  samtools sort ${i}.sr.bam -o ${i}.sr.sort
 done
 
 echo "DONE $(date)"
