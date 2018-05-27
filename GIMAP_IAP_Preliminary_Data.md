@@ -614,6 +614,13 @@ done
 #  IF there is a glitch with these, make sure you check that all files are correctly position sorted
 #python check_sorting.py \
 
+# Finally, we need to make sure that all of the files are position sorted
+array1=($(ls *.F.bam | sed 's/.F.bam//g'))
+for i in ${array1[@]}; do
+  samtools sort ${i}.discordants.bam sample.discordants.pe.sort
+  samtools sort ${i}.sr.bam ${i}.sr.sort
+done
+
 echo "DONE $(date)"
 
 ```
@@ -621,14 +628,15 @@ echo "DONE $(date)"
 Now we can finally run the LUMPY command. We must put in the individual mean and stdev for each file so they run correctly. Create a list based on all of this information  Output will be parsed into BED format.
 
 ```
+# Use these commands to create the arrays
 grep "LUMPY" discordant_output | cut -d ' ' -f 1 > mean_stdev_array.txt
 grep "mean" discordant_output | sed 's/  /,/g' > mean_lines.txt
 ```
-
+Put the following commands into a SLURM script called LUMPY.sh
 ```
 #!/bin/bash
 #SBATCH -t 100:00:00
-#SBATCH --nodes 3
+#SBATCH --nodes 1
 #SBATCH --exclusive
 #SBATCH --mail-user=erin_roberts@my.uri.edu
 #SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_output
@@ -639,6 +647,8 @@ cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
 module load BEDTools/2.26.0-foss-2016b
 #need BEDtools to be downloaded in order to view the output
 module load LUMPY/0.2.13-foss-2016b
+
+echo "START $(date)"
 
 #this command will run LUMPY with both paired end and split reads
 # pe indicates paired end options
@@ -654,12 +664,14 @@ for ((i=0;i<${#array[@]};++i)); do
         -mw 4 \
         -tt 0.0 \
         -pe \
-        id:${array[i]},bam_file:${array[i]}.discordants.bam,${array2[i]},histo_file:${array[i]}.GIMAP.lib1.histo,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
+        id:${array[i]},bam_file:${array[i]}.discordants.bam,${array2[i]},histo_file:${array[i]}.lib1.histo,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
         -sr \
         bam_file:${array[i]}.sr.bam,back_distance:20,weight:1,id:2,min_mapping_threshold:20 \
-        > ${i}.pesr.bedpe
+        > ${array[i]}.pesr.bedpe
         echo "done ${array[i]}"
 done
+
+echo "done all $(date)"
 
 ```
 
