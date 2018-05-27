@@ -306,9 +306,6 @@ done
 
 echo "done $(date)"
 
-# initially received error: Exception in thread "main" picard.PicardException: Found a samRecordWithOrdinal with sufficiently large clipping that we may have
- missed including it in an early duplicate marking iteration.  Please increase the minimum distance to at least 302bp
-to ensure it is considered (was 300), so the minimum distance was increased.
 ```
 Now we are able to remove duplicates as well as any secondary alignments, mappings with a quality score of less than ten, and reads with more than 80 bp clipped. Finally we can create a BAM index from our fully processed files.
 
@@ -341,10 +338,6 @@ for i in ${array1[@]}; do
   paste <(samtools view -c ${i}.md.bam) <(samtools view -c ${i}.F.bam )
 done
 
-# receieved the following error that
-[W::bam_hdr_read] EOF marker is absent. The input is probably truncated
-[E::bgzf_read] Read block operation failed with error -1 after 219 of 291 bytes
-[main_samview] truncated file.
 
 ```
 
@@ -576,7 +569,101 @@ Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 
 1. Now we can use samtools to extract these coordinates for the GIMAP Sequences
 
-#first we will extract the appropriate ranges and put them all in one file
+First we will extract the appropriate ranges and put them all in one file. We will put the following commands into
+a script called subset_bam.sh
+
+2. Analyze structural variants using LUMPY
+
+LUMPY will be used to detect structural variants and BIC-Seq2 will be used to look at copy number variants.
+
+Analyses were structured based on Greer et al., 2017.
+
+"Using the conventional WGS data as input, tumor SVs were detected using LumPy and somatic copy number variants (CNVs) were detected using BICseq2 [26, 27]. LumPy was run using the lumpyexpress executable with default parameters, and the output VCF file was parsed to bed format for further processing. For copy number calling, BICseq2 first removes potential biases from the se- quencing data (BICseq2-norm v0.2.4) and subsequently calls CNVs from the normalized data (BICseq2-seg v0.7.2). The lambda parameter supplied to BICseq2-seg tunes the smoothness of the resulting CNV profile; a lambda value of 30 was used to call CNVs for the primary tumor and metastatic samples. Amplifications and deletions were called as segments with tumor/normal copy number ratios greater than 1.25 and less than 0.95, respectively.
+
+Tutorial with LUMPY to find structural variants: http://bioinformatics-ca.github.io/bioinformatics_for_cancer_genomics_2016/rearrangement, https://mississippi.snv.jussieu.fr/u/drosofff/w/constructed-lumpy-workflow-imported-from-uploaded-file,
+http://ngseasy.readthedocs.io/en/latest/containerized/ngseasy_dockerfiles/ngseasy_lumpy/README/
+
+First we will prepare the data for LUMPY input by making BAM files with only discordant read pairs and split reads. Discordant read pairs are those that do not map as expected (and may be variants). Remembers these reads must first be sorted in a bam file. Next we will create a bam file containing only split reads that were mapped with a large insertion or deletion in the alignment.  
+
+Copy the commands below into a script called LUMPY_prep.sh. Make all the scripts executable first using `chmod u+x script`
+
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 1
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/discordant_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/discordant_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+echo "START $(date)"
+module load SAMtools/1.5-foss-2017a
+
+#extract only discordant read pairs
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=($(ls *.F.bam | sed 's/.F.bam//g'))
+for i in ${array1[@]}; do
+  samtools view -b -F 1294 ${i}.F.bam > ${i}.discordants.bam
+  samtools view -h ${i}.F.bam | ./extractSplitReads_BwaMem -i stdin | samtools view -Sb - > ${i}.sr.bam
+  samtools view ${i}.F.bam |  tail -n+100000 | ./pairend_distro.py -r 150 -X 4 -N 10000 -o ${i}.lib1.histo
+  echo "${i} done LUMPY preprocess"
+done
+
+#  IF there is a glitch with these, make sure you check that all files are correctly position sorted
+#python check_sorting.py \
+
+echo "DONE $(date)"
+
+```
+
+Now we can finally run the LUMPY command. We must put in the individual mean and stdev for each file so they run correctly. Create a list based on all of this information  Output will be parsed into BED format.
+
+```
+grep "LUMPY" discordant_output | cut -d ' ' -f 1 > mean_stdev_array.txt
+grep "mean" discordant_output | sed 's/  /,/g' > mean_lines.txt
+```
+
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 3
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+module load BEDTools/2.26.0-foss-2016b
+#need BEDtools to be downloaded in order to view the output
+module load LUMPY/0.2.13-foss-2016b
+
+#this command will run LUMPY with both paired end and split reads
+# pe indicates paired end options
+# sr indicates split read options
+# default parameters recommended by the writers will be used
+# min_non_overlap set to the read length
+
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array=($(cat mean_stdev_array.txt))
+array2=($(cat mean_lines.txt))
+for ((i=0;i<${#array[@]};++i)); do
+    lumpy \
+        -mw 4 \
+        -tt 0.0 \
+        -pe \
+        id:${array[i]},bam_file:${array[i]}.discordants.bam,${array2[i]},histo_file:${array[i]}.GIMAP.lib1.histo,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
+        -sr \
+        bam_file:${array[i]}.sr.bam,back_distance:20,weight:1,id:2,min_mapping_threshold:20 \
+        > ${i}.pesr.bedpe
+        echo "done ${array[i]}"
+done
+
+```
+
+Finally we need to subset the output, because subsetting does not work prior to these steps because samtools doesn't process truncated files that are mising a sam header
 
 ```
 #!/bin/bash
@@ -593,7 +680,7 @@ echo "START $(date)"
 module load SAMtools/1.5-foss-2017a
 
 F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=(ls *.F.bam | sed 's/.F.bam//g')
+array1=($)(ls *.F.bam | sed 's/.F.bam//g'))
 for i in ${array1[@]}; do
   samtools view ${i}.F.bam NC_035781.1:43704802-43757768 > $F/${i}.GIMAP.subset.bam
   samtools view ${i}.F.bam NC_035783.1:41487217-42243082 >> $F/${i}.GIMAP.subset.bam
@@ -609,18 +696,13 @@ echo "done ${i}"
 
 ```
 
-2. Perform Copy Number Variant Analysis on those subsetted sequences using LUMPY and BICSeq2
+3. Perform BICseq2 commands to look at copy number variants
 
-LUMPY will be used to detect structural variants and BIC-Seq2 will be used to look at copy number variants.
+Two steps will be used in the BICSeq2 timeline, it first removes potential biases from the se- quencing data (BICseq2-norm v0.2.4) and subsequently calls CNVs from the normalized data (BICseq2-seg v0.7.2). The lambda parameter supplied to BICseq2-seg tunes the smoothness of the resulting CNV profile; a lambda value of 30 was used to call CNVs for the primary tumor and metastatic samples. Amplifications and deletions were called as segments with tumor/normal copy number ratios greater than 1.25 and less than 0.95, respectively.
 
-Analyses were structured based on Greer et al., 2017.
 
-"Using the conventional WGS data as input, tumor SVs were detected using LumPy and somatic copy number variants (CNVs) were detected using BICseq2 [26, 27]. LumPy was run using the lumpyexpress executable with default parameters, and the output VCF file was parsed to bed format for further processing. For copy number call- ing, BICseq2 first removes potential biases from the se- quencing data (BICseq2-norm v0.2.4) and subsequently calls CNVs from the normalized data (BICseq2-seg v0.7.2). The lambda parameter supplied to BICseq2-seg tunes the smoothness of the resulting CNV profile; a lambda value of 30 was used to call CNVs for the primary tumor and metastatic samples. Amplifications and deletions were called as segments with tumor/normal copy number ratios greater than 1.25 and less than 0.95, respectively.
+In our processing after BWA we already removed any secondary alignments, meaning we only have "uniquely mapped reads". Here is the manual page for BIC-Seq2. http://compbio.med.harvard.edu/BIC-seq/.
 
-Tutorial with LUMPY to find structural variants: http://bioinformatics-ca.github.io/bioinformatics_for_cancer_genomics_2016/rearrangement, https://mississippi.snv.jussieu.fr/u/drosofff/w/constructed-lumpy-workflow-imported-from-uploaded-file,
-http://ngseasy.readthedocs.io/en/latest/containerized/ngseasy_dockerfiles/ngseasy_lumpy/README/
-
-First we will prepare the data for LUMPY input by making BAM files with only discordant read pairs and split reads. Discordant read pairs are those that do not map as expected (and may be variants). Remembers these reads must first be sorted in a bam file. Next we will create a bam file containing only split reads that were mapped with a large insertion or deletion in the alignment.  
 
 ```
 #!/bin/bash
@@ -635,78 +717,34 @@ cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
 
 echo "START $(date)"
 module load SAMtools/1.5-foss-2017a
+module load BICseq-norm/0.2.4
+module load BICseq-seg/0.7.2
 
-#extract only discordant read pairs
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=(ls *.F.bam | sed 's/.F.bam//g')
-for i in ${array1[@]}; do
-  samtools view -b -F 1294 ${i}.GIMAP.subset.bam > ${i}.discordants.bam
-done
+# Structure of the BIC-Seq2 command for the command line
+ BICseq2-norm.pl [options] <configFile> <output
+ # <configFile> specifies the location of the configure file that has the necessary information for normalization (see below for the format of the configure file)
+ # <output>  is the file that stores  the parameter estimates in the GAM model. This is not useful for general users.
 
-# Make a bam file that only has split read pairs
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=(ls *.F.bam | sed 's/.F.bam//g')
-  samtools view -h ${i}.bam | ~/CourseData/CG_data/Module3/scripts/extractSplitReads_BwaMem -i stdin | samtools view -Sb - > ${i}.sr.bam
-done
+ --help
+       -l=<int>: read length
+       -s=<int>: fragment size
+       -p=<float>: a subsample percentage: default 0.0002.
+       -b=<int>: bin the expected and observed as <int> bp bins; Default 100.
+       --gc_bin: if specified, report the GC-content in the bins
+       --NoMapBin: if specified, do NOT bin the reads according to the mappability
+       --bin_only: only bin the reads without normalization
+       --fig=<string>: plot the read count VS GC figure in the specified file (in pdf format)
+       --title=<string>: title of the figure
+       --tmp=<string>: the tmp directory;
 
-# Determine the distribution of paired end fragment sized
-# We don't need to skip the first million reads because we subsetted the file so drastically to begin with
-# This script will display the mean and stdev to the screen
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=(ls *.F.bam | sed 's/.F.bam//g')
-  samtools view ${i}.F.bam | $F/pairend_distro.py -r 150 -X 4 -o ${i}.lib1.histo
-done
 
-#  IF there is a glitch with these, make sure you check that all files are correctly position sorted
-#python check_sorting.py \
 
 
 ```
-
-Now we can finally run the LUMPY command. 
-```
-#!/bin/bash
-#SBATCH -t 100:00:00
-#SBATCH --nodes 3
-#SBATCH --exclusive
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_output
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/lumpy_error
-#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
-cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-
-module load BEDTools/2.26.0-foss-2016b
-#need BEDtools to be downloaded in order to view the output
-module load LUMPY/0.2.13-foss-2016b
-
-
-#this command will run LUMPY with both paired end and split reads
-#pe indicates paired end options
-# sr indicates split read options
-# default parameters recommended by the writers will be used
-# min_non_overlap set to the read lenght
-
-
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=(ls *.F.bam | sed 's/.F.bam//g')
-for i in ${array1[@]}; do
-    lumpy \
-        -mw 4 \
-        -tt 0.0 \
-        -pe \
-        id:${i},bam_file:${i}.bam.discordant.pe.bam,histo_file:GIMAP.pe.histo,mean:500,stdev:50,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
-        -sr \
-        bam_file:${i}.sr.sort.bam,back_distance:20,weight:1,id:2,min_mapping_threshold:20 \
-        > ${i}.pesr.bedpe
-done
-
-```
-
-
-
-3. Use FreeBayes SNP calling file to also look at those regions and compare the SNPs within them
 
 4. Perform PCA to look at how the copy number variants cluster in the different populations
+
+5. Use IGV to examine
 
 
 # Works Cited
