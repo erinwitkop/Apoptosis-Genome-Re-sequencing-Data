@@ -664,49 +664,20 @@ for ((i=0;i<${#array[@]};++i)); do
         -mw 4 \
         -tt 0.0 \
         -pe \
-        id:${array[i]},bam_file:${array[i]}.discordants.bam,${array2[i]},histo_file:${array[i]}.lib1.histo,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
+        id:${array[i]},bam_file:${array[i]}.discordants.pe.sort,${array2[i]},histo_file:${array[i]}.lib1.histo,read_length:150,min_non_overlap:150,discordant_z:4,back_distance:20,weight:1,min_mapping_threshold:20\
         -sr \
-        bam_file:${array[i]}.sr.bam,back_distance:20,weight:1,id:2,min_mapping_threshold:20 \
-        > ${array[i]}.pesr.bedpe
+        bam_file:${array[i]}.sr.sort,back_distance:20,weight:1,id:2,min_mapping_threshold:20 \
+        > ${array[i]}.pesr.vcf
         echo "done ${array[i]}"
 done
 
 echo "done all $(date)"
 
-```
-
-Finally we need to subset the output, because subsetting does not work prior to these steps because samtools doesn't process truncated files that are mising a sam header
+# Intersect all the files using vcftools isec
 
 ```
-#!/bin/bash
-#SBATCH -t 100:00:00
-#SBATCH --nodes 3
-#SBATCH --exclusive
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_output
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_error
-#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
-cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
 
-echo "START $(date)"
-module load SAMtools/1.5-foss-2017a
 
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=($)(ls *.F.bam | sed 's/.F.bam//g'))
-for i in ${array1[@]}; do
-  samtools view ${i}.F.bam NC_035781.1:43704802-43757768 > $F/${i}.GIMAP.subset.bam
-  samtools view ${i}.F.bam NC_035783.1:41487217-42243082 >> $F/${i}.GIMAP.subset.bam
-  samtools view ${i}.F.bam NC_035784.1:90744459-90751167 >> $F/${i}.GIMAP.subset.bam
-  samtools view ${i}.F.bam NC_035785.1:13854692-13928162 >> $F/${i}.GIMAP.subset.bam
-  samtools view ${i}.F.bam NC_035786.1:15027963-55588883 >> $F/${i}.GIMAP.subset.bam
-  samtools view ${i}.F.bam NC_035787.1:6914739-72430550 >> $F/${i}.GIMAP.subset.bam
-  samtools view ${i}.F.bam NC_035788.1:30445429-104317686 >> $F/${i}.GIMAP.subset.bam
-  echo "done ${i}"
-done
-
-echo "done ${i}"
-
-```
 
 3. Perform BICseq2 commands to look at copy number variants
 
@@ -735,7 +706,7 @@ module load BICseq-seg/0.7.2
 # Structure of the BIC-Seq2 command for the command line
  BICseq2-norm.pl [options] <configFile> <output
  # <configFile> specifies the location of the configure file that has the necessary information for normalization (see below for the format of the configure file)
- # <output>  is the file that stores  the parameter estimates in the GAM model. This is not useful for general users.
+ # <output>  is the file that stores the parameter estimates in the GAM model. This is not useful for general users.
 
  --help
        -l=<int>: read length
@@ -750,9 +721,53 @@ module load BICseq-seg/0.7.2
        --tmp=<string>: the tmp directory;
 
 
+```
+5. Call SVGenotypes using SVTyper
 
+-This is available on Github at https://github.com/hall-lab/svtools/tree/master/svtools/bin/svtyper
+
+
+
+
+4. Subset file regions using BEDtools
+
+Finally we need to subset the output to only inspect the regions we care about. We can do this using BEDtools. In order to run the following commands we need to give BEDtools and input text file that list the chromosome and the starting positions for each of them. The file needs to have three columns, where the first is the chromosome, the second is the starting position, and the third is the ending position.
+
+$ cat GIMAP_coordinates.txt
+NC_035781.1	43704802	43757768
+NC_035783.1	41487217	42243082
+NC_035784.1	90744459	90751167
+NC_035785.1	13854692	13928162
+NC_035786.1	15027963	55588883
+NC_035787.1	6914739		72430550  6459499
+NC_035788.1	30445429	104317686
 
 ```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 3
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+echo "START $(date)"
+module load BEDTools/2.26.0-foss-2016b
+
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=($)(ls *.F.bam | sed 's/.F.bam//g'))
+for i in ${array1[@]}; do
+  bedtools intersect -header -wa -a ${i}.bedpe -b GIMAP_coordinates.txt
+  echo "done ${i}"
+done
+
+echo "done ${i}"
+
+```
+
+
 
 4. Perform PCA to look at how the copy number variants cluster in the different populations
 
@@ -768,6 +783,9 @@ http://bioinformatics-ca.github.io/bioinformatics_for_cancer_genomics_2016/rearr
 https://bcbio.wordpress.com/tag/lumpy/
 http://ngseasy.readthedocs.io/en/latest/containerized/ngseasy_dockerfiles/ngseasy_lumpy/README/
 https://mississippi.snv.jussieu.fr/u/drosofff/w/constructed-lumpy-workflow-imported-from-uploaded-file
+https://raw.githubusercontent.com/bioinformatics-ca/2015_workshops/master/BiCG_2015/BiCG_2015_Module3_Lab2.txt
+#vcftools isec code help
+https://www.biostars.org/p/140263/
 
 MultiQC: Summarize analysis results for multiple tools and samples in a single report
 Philip Ewels, Måns Magnusson, Sverker Lundin and Max Käller
