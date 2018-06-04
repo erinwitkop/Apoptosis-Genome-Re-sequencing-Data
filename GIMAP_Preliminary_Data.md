@@ -371,7 +371,7 @@ done
 
 ```
 
-# STEP 8: Isolate GIMAP Gene Family Regions of Interest
+# STEP 8: Identify GIMAP Gene Family Regions of Interest
 
 Preliminary Analysis of annotated GIMAP genes in the Reference Genome (.gff) reveal
 53 total GIMAP genes.
@@ -411,7 +411,7 @@ Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 | NC_035788.1   | CHR9              | 29445429 | 103317686 | 30445429-104317686 |
 
 
-1. Analyze structural variants using LUMPY
+# STEP 9. Analyze structural variants using LUMPY
 
 LUMPY will be used to detect structural variants and BIC-Seq2 will be used to look at copy number variants.
 
@@ -525,7 +525,7 @@ echo "done all $(date)"
 lumpyexpress -B CL_1.F.bam,CL_2.F.bam,CL_3.F.bam,CL_4.F.bam,CL_5.F.bam,CL_6.F.bam,CLP_1.F.bam,CLP_2.F.bam,CLP_3.F.bam,CLP_4.F.bam,CLP_5.F.bam,CLP_6.F.bam,CS_1.F.bam,CS_2.F.bam,CS_3.F.bam,CS_5.F.bam,CS_6.F.bam,CS_7.F.bam,DEBY_1.F.bam,DEBY_2.F.bam,DEBY_3.F.bam,DEBY_4.F.bam,DEBY_5.F.bam,DEBY_6.F.bam,HC_1.F.bam,HC_3.F.bam,HC_4.F.bam,HC_5.F.bam,HC_6.F.bam,HC_7.F.bam,HC_VA_1.F.bam,HC_VA_2.F.bam,HC_VA_3.F.bam,HC_VA_4.F.bam,HC_VA_5.F.bam,HC_VA_6.F.bam,HG_HG0F2.F.bam,HG_HG2F1.F.bam,HG_HG2M5.F.bam,HI_1.F.bam,HI_2.F.bam,HI_3.F.bam,HI_4.F.bam,HI_5.F.bam,HI_6.F.bam,LM_1_pool.F.bam,LM_3.F.bam,LM_4.F.bam,LM_7.F.bam,LM_8.F.bam,LOLA_1.F.bam,LOLA_2.F.bam,LOLA_3.F.bam,LOLA_4.F.bam,LOLA_5.F.bam,LOLA_6.F.bam,NEH_1.F.bam,NEH_2.F.bam,NEH_3.F.bam,NEH_4.F.bam,NEH_5.F.bam,NEH_6.F.bam,NG_NH0H4.F.bam,NG_NH2F6.F.bam,NG_NH2F8.F.bam,NG_NH2M1.F.bam,OBOYS2_1.F.bam,OBOYS2_2.F.bam,OBOYS2_3.F.bam,OBOYS2_4.F.bam,OBOYS2_5.F.bam,OBOYS2_6.F.bam,SL_1.F.bam,SL_2.F.bam,SL_3.F.bam,SL_4.F.bam,SL_5.F.bam,SL_6.F.bam,SM_10.F.bam,SM_11.F.bam,SM_12.F.bam,SM_7.F.bam,SM_8.F.bam,SM_9.F.bam,UMFS_1.F.bam,UMFS_2.F.bam,UMFS_3.F.bam,UMFS_4.F.bam,UMFS_5.F.bam,UMFS_6.F.bam -S CL_1.sr.sort,CL_2.sr.sort,CL_3.sr.sort,CL_4.sr.sort,CL_5.sr.sort,CL_6.sr.sort,CLP_1.sr.sort,CLP_2.sr.sort,CLP_3.sr.sort,CLP_4.sr.sort,CLP_5.sr.sort,CLP_6.sr.sort,CS_1.sr.sort,CS_2.sr.sort,CS_3.sr.sort,CS_5.sr.sort,CS_6.sr.sort,CS_7.sr.sort,DEBY_1.sr.sort,DEBY_2.sr.sort,DEBY_3.sr.sort,DEBY_4.sr.sort,DEBY_5.sr.sort,DEBY_6.sr.sort,HC_1.sr.sort,HC_3.sr.sort,HC_4.sr.sort,HC_5.sr.sort,HC_6.sr.sort,HC_7.sr.sort,HC_VA_1.sr.sort,HC_VA_2.sr.sort,HC_VA_3.sr.sort,HC_VA_4.sr.sort,HC_VA_5.sr.sort,HC_VA_6.sr.sort,HG_HG0F2.sr.sort,HG_HG2F1.sr.sort,HG_HG2M5.sr.sort,HI_1.sr.sort,HI_2.sr.sort,HI_3.sr.sort,HI_4.sr.sort,HI_5.sr.sort,HI_6.sr.sort,LM_1_pool.sr.sort,LM_3.sr.sort,LM_4.sr.sort,LM_7.sr.sort,LM_8.sr.sort,LOLA_1.sr.sort,LOLA_2.sr.sort,LOLA_3.sr.sort,LOLA_4.sr.sort,LOLA_5.sr.sort,LOLA_6.sr.sort,NEH_1.sr.sort,NEH_2.sr.sort,NEH_3.sr.sort,NEH_4.sr.sort,NEH_5.sr.sort,NEH_6.sr.sort,NG_NH0H4.sr.sort,NG_NH2F6.sr.sort,NG_NH2F8.sr.sort,NG_NH2M1.sr.sort,OBOYS2_1.sr.sort,OBOYS2_2.sr.sort,OBOYS2_3.sr.sort,OBOYS2_4.sr.sort,OBOYS2_5.sr.sort,OBOYS2_6.sr.sort,SL_1.sr.sort,SL_2.sr.sort,SL_3.sr.sort,SL_4.sr.sort,SL_5.sr.sort,SL_6.sr.sort,SM_10.sr.sort,SM_11.sr.sort,SM_12.sr.sort,SM_7.sr.sort,SM_8.sr.sort,SM_9.sr.sort,UMFS_1.sr.sort,UMFS_2.sr.sort,UMFS_3.sr.sort,UMFS_4.sr.sort,UMFS_5.sr.sort,UMFS_6.sr.sort -D CL_1.discordants.pe.sort,CL_2.discordants.pe.sort,CL_3.discordants.pe.sort,CL_4.discordants.pe.sort,CL_5.discordants.pe.sort,CL_6.discordants.pe.sort,CLP_1.discordants.pe.sort,CLP_2.discordants.pe.sort,CLP_3.discordants.pe.sort,CLP_4.discordants.pe.sort,CLP_5.discordants.pe.sort,CLP_6.discordants.pe.sort,CS_1.discordants.pe.sort,CS_2.discordants.pe.sort,CS_3.discordants.pe.sort,CS_5.discordants.pe.sort,CS_6.discordants.pe.sort,CS_7.discordants.pe.sort,DEBY_1.discordants.pe.sort,DEBY_2.discordants.pe.sort,DEBY_3.discordants.pe.sort,DEBY_4.discordants.pe.sort,DEBY_5.discordants.pe.sort,DEBY_6.discordants.pe.sort,HC_1.discordants.pe.sort,HC_3.discordants.pe.sort,HC_4.discordants.pe.sort,HC_5.discordants.pe.sort,HC_6.discordants.pe.sort,HC_7.discordants.pe.sort,HC_VA_1.discordants.pe.sort,HC_VA_2.discordants.pe.sort,HC_VA_3.discordants.pe.sort,HC_VA_4.discordants.pe.sort,HC_VA_5.discordants.pe.sort,HC_VA_6.discordants.pe.sort,HG_HG0F2.discordants.pe.sort,HG_HG2F1.discordants.pe.sort,HG_HG2M5.discordants.pe.sort,HI_1.discordants.pe.sort,HI_2.discordants.pe.sort,HI_3.discordants.pe.sort,HI_4.discordants.pe.sort,HI_5.discordants.pe.sort,HI_6.discordants.pe.sort,LM_1_pool.discordants.pe.sort,LM_3.discordants.pe.sort,LM_4.discordants.pe.sort,LM_7.discordants.pe.sort,LM_8.discordants.pe.sort,LOLA_1.discordants.pe.sort,LOLA_2.discordants.pe.sort,LOLA_3.discordants.pe.sort,LOLA_4.discordants.pe.sort,LOLA_5.discordants.pe.sort,LOLA_6.discordants.pe.sort,NEH_1.discordants.pe.sort,NEH_2.discordants.pe.sort,NEH_3.discordants.pe.sort,NEH_4.discordants.pe.sort,NEH_5.discordants.pe.sort,NEH_6.discordants.pe.sort,NG_NH0H4.discordants.pe.sort,NG_NH2F6.discordants.pe.sort,NG_NH2F8.discordants.pe.sort,NG_NH2M1.discordants.pe.sort,OBOYS2_1.discordants.pe.sort,OBOYS2_2.discordants.pe.sort,OBOYS2_3.discordants.pe.sort,OBOYS2_4.discordants.pe.sort,OBOYS2_5.discordants.pe.sort,OBOYS2_6.discordants.pe.sort,SL_1.discordants.pe.sort,SL_2.discordants.pe.sort,SL_3.discordants.pe.sort,SL_4.discordants.pe.sort,SL_5.discordants.pe.sort,SL_6.discordants.pe.sort,SM_10.discordants.pe.sort,SM_11.discordants.pe.sort,SM_12.discordants.pe.sort,SM_7.discordants.pe.sort,SM_8.discordants.pe.sort,SM_9.discordants.pe.sort,UMFS_1.discordants.pe.sort,UMFS_2.discordants.pe.sort,UMFS_3.discordants.pe.sort,UMFS_4.discordants.pe.sort,UMFS_5.discordants.pe.sort,UMFS_6.discordants.pe.sort -t3 -K lumpyexpress.config -o full_lumpy_bam.vcf
 
 ```
-3. Call SVGenotypes using SVTyper
+# STEP 10: Call SVGenotypes using SVTyper
 
 -This is available on Github at https://github.com/hall-lab/svtools/tree/master/svtools/bin/svtyper.
 -From their website =
@@ -571,7 +571,7 @@ echo "done combine $(date)"
 
 ```
 
-# STEP 9. Filter VCF file to uncover structural variants across populations
+# STEP 11. Filter VCF file to uncover structural variants across populations
 
 The following steps were adapted from an excellent protocol developed by Jon Puritz. For more detailed information please see [http://ddocent.com/filtering/](http://ddocent.com/filtering/)
 We will perform all of the following commands in single bash script called vcf_filter.sh
