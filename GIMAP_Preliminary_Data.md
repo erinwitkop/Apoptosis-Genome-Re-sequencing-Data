@@ -1,4 +1,4 @@
-# Preliminary Gene Family Analysis Data for GIMAP and IAP Gene Families
+# Preliminary Gene Family Analysis Data for Gene Families
 
 ## Goals:
 1. Gather preliminary data on patterns of gene family variation across natural and selected populations
@@ -647,6 +647,7 @@ cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
 module load BEDTools/2.26.0-foss-2016b
 #need BEDtools to be downloaded in order to view the output
 module load LUMPY/0.2.13-foss-2016b
+module load SAMtools/1.5-foss-2017a
 
 echo "START $(date)"
 
@@ -673,56 +674,19 @@ done
 
 echo "done all $(date)"
 
-# Intersect all the files using vcftools isec
+# The previous LUMPY command will process all the files separately, we would like to process them
+# all together using lumpyexpress
+# Lumpyexpress requires comma separated lists of files
+# ls *.F.bam | awk -vORS=, '{print $1 }'
+# ls *.discordants.pe.sort | awk -vORS=, '{print $1 }'
+# ls *.sr.sort | awk -vORS=, '{print $1 }'
+# ls -m will output with commas
+# created a new lumpyexpress.config file with the path to samtools added
+
+lumpyexpress -B CL_1.F.bam,CL_2.F.bam,CL_3.F.bam,CL_4.F.bam,CL_5.F.bam,CL_6.F.bam,CLP_1.F.bam,CLP_2.F.bam,CLP_3.F.bam,CLP_4.F.bam,CLP_5.F.bam,CLP_6.F.bam,CS_1.F.bam,CS_2.F.bam,CS_3.F.bam,CS_5.F.bam,CS_6.F.bam,CS_7.F.bam,DEBY_1.F.bam,DEBY_2.F.bam,DEBY_3.F.bam,DEBY_4.F.bam,DEBY_5.F.bam,DEBY_6.F.bam,HC_1.F.bam,HC_3.F.bam,HC_4.F.bam,HC_5.F.bam,HC_6.F.bam,HC_7.F.bam,HC_VA_1.F.bam,HC_VA_2.F.bam,HC_VA_3.F.bam,HC_VA_4.F.bam,HC_VA_5.F.bam,HC_VA_6.F.bam,HG_HG0F2.F.bam,HG_HG2F1.F.bam,HG_HG2M5.F.bam,HI_1.F.bam,HI_2.F.bam,HI_3.F.bam,HI_4.F.bam,HI_5.F.bam,HI_6.F.bam,LM_1_pool.F.bam,LM_3.F.bam,LM_4.F.bam,LM_7.F.bam,LM_8.F.bam,LOLA_1.F.bam,LOLA_2.F.bam,LOLA_3.F.bam,LOLA_4.F.bam,LOLA_5.F.bam,LOLA_6.F.bam,NEH_1.F.bam,NEH_2.F.bam,NEH_3.F.bam,NEH_4.F.bam,NEH_5.F.bam,NEH_6.F.bam,NG_NH0H4.F.bam,NG_NH2F6.F.bam,NG_NH2F8.F.bam,NG_NH2M1.F.bam,OBOYS2_1.F.bam,OBOYS2_2.F.bam,OBOYS2_3.F.bam,OBOYS2_4.F.bam,OBOYS2_5.F.bam,OBOYS2_6.F.bam,SL_1.F.bam,SL_2.F.bam,SL_3.F.bam,SL_4.F.bam,SL_5.F.bam,SL_6.F.bam,SM_10.F.bam,SM_11.F.bam,SM_12.F.bam,SM_7.F.bam,SM_8.F.bam,SM_9.F.bam,UMFS_1.F.bam,UMFS_2.F.bam,UMFS_3.F.bam,UMFS_4.F.bam,UMFS_5.F.bam,UMFS_6.F.bam -S CL_1.sr.sort,CL_2.sr.sort,CL_3.sr.sort,CL_4.sr.sort,CL_5.sr.sort,CL_6.sr.sort,CLP_1.sr.sort,CLP_2.sr.sort,CLP_3.sr.sort,CLP_4.sr.sort,CLP_5.sr.sort,CLP_6.sr.sort,CS_1.sr.sort,CS_2.sr.sort,CS_3.sr.sort,CS_5.sr.sort,CS_6.sr.sort,CS_7.sr.sort,DEBY_1.sr.sort,DEBY_2.sr.sort,DEBY_3.sr.sort,DEBY_4.sr.sort,DEBY_5.sr.sort,DEBY_6.sr.sort,HC_1.sr.sort,HC_3.sr.sort,HC_4.sr.sort,HC_5.sr.sort,HC_6.sr.sort,HC_7.sr.sort,HC_VA_1.sr.sort,HC_VA_2.sr.sort,HC_VA_3.sr.sort,HC_VA_4.sr.sort,HC_VA_5.sr.sort,HC_VA_6.sr.sort,HG_HG0F2.sr.sort,HG_HG2F1.sr.sort,HG_HG2M5.sr.sort,HI_1.sr.sort,HI_2.sr.sort,HI_3.sr.sort,HI_4.sr.sort,HI_5.sr.sort,HI_6.sr.sort,LM_1_pool.sr.sort,LM_3.sr.sort,LM_4.sr.sort,LM_7.sr.sort,LM_8.sr.sort,LOLA_1.sr.sort,LOLA_2.sr.sort,LOLA_3.sr.sort,LOLA_4.sr.sort,LOLA_5.sr.sort,LOLA_6.sr.sort,NEH_1.sr.sort,NEH_2.sr.sort,NEH_3.sr.sort,NEH_4.sr.sort,NEH_5.sr.sort,NEH_6.sr.sort,NG_NH0H4.sr.sort,NG_NH2F6.sr.sort,NG_NH2F8.sr.sort,NG_NH2M1.sr.sort,OBOYS2_1.sr.sort,OBOYS2_2.sr.sort,OBOYS2_3.sr.sort,OBOYS2_4.sr.sort,OBOYS2_5.sr.sort,OBOYS2_6.sr.sort,SL_1.sr.sort,SL_2.sr.sort,SL_3.sr.sort,SL_4.sr.sort,SL_5.sr.sort,SL_6.sr.sort,SM_10.sr.sort,SM_11.sr.sort,SM_12.sr.sort,SM_7.sr.sort,SM_8.sr.sort,SM_9.sr.sort,UMFS_1.sr.sort,UMFS_2.sr.sort,UMFS_3.sr.sort,UMFS_4.sr.sort,UMFS_5.sr.sort,UMFS_6.sr.sort -D CL_1.discordants.pe.sort,CL_2.discordants.pe.sort,CL_3.discordants.pe.sort,CL_4.discordants.pe.sort,CL_5.discordants.pe.sort,CL_6.discordants.pe.sort,CLP_1.discordants.pe.sort,CLP_2.discordants.pe.sort,CLP_3.discordants.pe.sort,CLP_4.discordants.pe.sort,CLP_5.discordants.pe.sort,CLP_6.discordants.pe.sort,CS_1.discordants.pe.sort,CS_2.discordants.pe.sort,CS_3.discordants.pe.sort,CS_5.discordants.pe.sort,CS_6.discordants.pe.sort,CS_7.discordants.pe.sort,DEBY_1.discordants.pe.sort,DEBY_2.discordants.pe.sort,DEBY_3.discordants.pe.sort,DEBY_4.discordants.pe.sort,DEBY_5.discordants.pe.sort,DEBY_6.discordants.pe.sort,HC_1.discordants.pe.sort,HC_3.discordants.pe.sort,HC_4.discordants.pe.sort,HC_5.discordants.pe.sort,HC_6.discordants.pe.sort,HC_7.discordants.pe.sort,HC_VA_1.discordants.pe.sort,HC_VA_2.discordants.pe.sort,HC_VA_3.discordants.pe.sort,HC_VA_4.discordants.pe.sort,HC_VA_5.discordants.pe.sort,HC_VA_6.discordants.pe.sort,HG_HG0F2.discordants.pe.sort,HG_HG2F1.discordants.pe.sort,HG_HG2M5.discordants.pe.sort,HI_1.discordants.pe.sort,HI_2.discordants.pe.sort,HI_3.discordants.pe.sort,HI_4.discordants.pe.sort,HI_5.discordants.pe.sort,HI_6.discordants.pe.sort,LM_1_pool.discordants.pe.sort,LM_3.discordants.pe.sort,LM_4.discordants.pe.sort,LM_7.discordants.pe.sort,LM_8.discordants.pe.sort,LOLA_1.discordants.pe.sort,LOLA_2.discordants.pe.sort,LOLA_3.discordants.pe.sort,LOLA_4.discordants.pe.sort,LOLA_5.discordants.pe.sort,LOLA_6.discordants.pe.sort,NEH_1.discordants.pe.sort,NEH_2.discordants.pe.sort,NEH_3.discordants.pe.sort,NEH_4.discordants.pe.sort,NEH_5.discordants.pe.sort,NEH_6.discordants.pe.sort,NG_NH0H4.discordants.pe.sort,NG_NH2F6.discordants.pe.sort,NG_NH2F8.discordants.pe.sort,NG_NH2M1.discordants.pe.sort,OBOYS2_1.discordants.pe.sort,OBOYS2_2.discordants.pe.sort,OBOYS2_3.discordants.pe.sort,OBOYS2_4.discordants.pe.sort,OBOYS2_5.discordants.pe.sort,OBOYS2_6.discordants.pe.sort,SL_1.discordants.pe.sort,SL_2.discordants.pe.sort,SL_3.discordants.pe.sort,SL_4.discordants.pe.sort,SL_5.discordants.pe.sort,SL_6.discordants.pe.sort,SM_10.discordants.pe.sort,SM_11.discordants.pe.sort,SM_12.discordants.pe.sort,SM_7.discordants.pe.sort,SM_8.discordants.pe.sort,SM_9.discordants.pe.sort,UMFS_1.discordants.pe.sort,UMFS_2.discordants.pe.sort,UMFS_3.discordants.pe.sort,UMFS_4.discordants.pe.sort,UMFS_5.discordants.pe.sort,UMFS_6.discordants.pe.sort -t3 -K lumpyexpress.config -o full_lumpy_bam.vcf
 
 ```
-
-
-
-3. Perform BICseq2 commands to look at copy number variants
-
-Two steps will be used in the BICSeq2 timeline, it first removes potential biases from the se- quencing data (BICseq2-norm v0.2.4) and subsequently calls CNVs from the normalized data (BICseq2-seg v0.7.2). The lambda parameter supplied to BICseq2-seg tunes the smoothness of the resulting CNV profile; a lambda value of 30 was used to call CNVs for the primary tumor and metastatic samples. Amplifications and deletions were called as segments with tumor/normal copy number ratios greater than 1.25 and less than 0.95, respectively.
-
-
-In our processing after BWA we already removed any secondary alignments, meaning we only have "uniquely mapped reads". Here is the manual page for BIC-Seq2. http://compbio.med.harvard.edu/BIC-seq/.
-
-
-```
-#!/bin/bash
-#SBATCH -t 100:00:00
-#SBATCH --nodes 3
-#SBATCH --exclusive
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/discordant_output
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/discordant_error
-#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
-cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-
-echo "START $(date)"
-module load SAMtools/1.5-foss-2017a
-module load BICseq-norm/0.2.4
-module load BICseq-seg/0.7.2
-
-# Structure of the BIC-Seq2 command for the command line
- BICseq2-norm.pl [options] <configFile> <output
- # <configFile> specifies the location of the configure file that has the necessary information for normalization (see below for the format of the configure file)
- # <output>  is the file that stores the parameter estimates in the GAM model. This is not useful for general users.
-
- --help
-       -l=<int>: read length
-       -s=<int>: fragment size
-       -p=<float>: a subsample percentage: default 0.0002.
-       -b=<int>: bin the expected and observed as <int> bp bins; Default 100.
-       --gc_bin: if specified, report the GC-content in the bins
-       --NoMapBin: if specified, do NOT bin the reads according to the mappability
-       --bin_only: only bin the reads without normalization
-       --fig=<string>: plot the read count VS GC figure in the specified file (in pdf format)
-       --title=<string>: title of the figure
-       --tmp=<string>: the tmp directory;
-
-
-```
-5. Call SVGenotypes using SVTyper
+3. Call SVGenotypes using SVTyper
 
 -This is available on Github at https://github.com/hall-lab/svtools/tree/master/svtools/bin/svtyper.
 -From their website =
@@ -730,7 +694,7 @@ module load BICseq-seg/0.7.2
 
 -l flag creates a JSON file with essential metrics on a BAM file. SVTyper will sample the first N reads for the file (1 million by default) to parse the libraries, read groups, and insert size histograms. This can be done in the absence of a VCF file.
 
-Load the following commands into a script called svtyper.sh
+Load the following commands into a script called svtyper.sh. The
 
 ```
 #!/bin/bash
@@ -746,19 +710,316 @@ cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
 echo "START $(date)"
 module load svtyper/0.6.1-foss-2017a-Python-2.7.13
 
+#Use the following code if you would like to run each file individually with the full bam file just generated
 array1=($(ls *.F.bam | sed 's/.F.bam//g'))
 for i in ${array1[@]}; do
-  svtyper -i ${i}.pesr.bedpe -B ${i}.F.bam -l ${i}.bam.json > .${i}.sv.gt.vcf
+  svtyper -i full_lumpy_bam.vcf -B ${i}.F.bam -S ${i}.sr.sort > ${i}.sv.gt2.vcf
   echo "done ${i} $(date)"
 done
 
 echo "DONE"
 
+#Finally, we can merge the SVTyped files into a single file using the following recommended command: (from https://github.com/arq5x/lumpy-sv/issues/84)
+ls *.sv.gt2.vcf > svtyper_vcfs.txt
+cat full_lumpy_bam.vcf \
+        | vcf_group_multiline.py \
+        | scripts/vcf_paste.py \
+            -q \
+            -m -
+             $(<svtyper_vcfs.txt) \
+        > final.vcf
+echo "done combine $(date)"
+
 ```
 
-4. Subset file regions using BEDtools
 
-Finally we need to subset the output to only inspect the regions we care about. We can do this using BEDtools. In order to run the following commands we need to give BEDtools and input text file that list the chromosome and the starting positions for each of them. The file needs to have three columns, where the first is the chromosome, the second is the starting position, and the third is the ending position.
+# STEP 9. Filter VCF file to uncover structural variants across populations
+
+The following steps were adapted from an excellent protocol developed by Jon Puritz. For more detailed information please see [http://ddocent.com/filtering/](http://ddocent.com/filtering/)
+We will perform all of the following commands in single bash script called vcf_filter.sh
+
+1. First we will use VCFTools to filter out any variants that have not been successfully genotyped to more than 50% of individuals ( `--max-missing 0.5`), those with a minor allele count of 3 (`--mac 3)`), and those with a quality score below 30 (`--minQ 30`)  
+
+```
+vcftools --vcf final.vcf --max-missing 0.5 --mac 3 --minQ 20 --recode --recode-INFO-all --out final.g5mac3
+
+```
+
+2. Getting rid of these first will help speed up this next command, which applies a minimum mean depth and a minimum depth for a genotype call. Genotypes will be called if they have atleast three reads.
+
+```
+vcftools --vcf final.firstfilter.recode.vcf --minDP 3 --recode --recode-INFO-all --out final.g5mac3dp3
+```
+
+3. Now we can remove individuals that have a lot of missing data.
+
+```
+# The output of this file will be called out.imiss
+vcftools --vcf final.g5mac3dp3.recode.vcf --missing-indv
+
+```
+4. We can now plot a histogram of individuals that are missing a lot of data using the following command (taken from http://ddocent.com/filtering/ by Jon Puritz).
+
+```
+mawk '!/IN/' out.imiss | cut -f5 > totalmissing
+gnuplot << \EOF
+set terminal dumb size 120, 30
+set autoscale
+unset label
+set title "Histogram of % missing data per individual"
+set ylabel "Number of Occurrences"
+set xlabel "% of missing data"
+#set yr [0:100000]
+binwidth=0.01
+bin(x,width)=width*floor(x/width) + binwidth/2.0
+plot 'totalmissing' using (bin($1,binwidth)):(1.0) smooth freq with boxes
+pause -1
+EOF
+```
+5. We can create a list with more than 50% missing data using the following mawk command.
+```
+mawk '$5 > 0.5' out.imiss | cut -f1 > lowDP.indv
+```
+6. This can then be piped into VCFtools so that the low coverage individuals can be removed.
+```
+vcftools --vcf final.g5mac3dp3.recode.vcf --remove lowDP.indv --recode --recode-INFO-all --out final.g5mac3dp3dplm
+
+```
+7. Next, we need to restrict the data to those variants that are called in a high percentage of individuals using a genotype call rate of 95% (`--max-missing 0.95`) and then filter based on the mean depth of genotypes of 20% (`--min-meanDP 20`).
+```
+vcftools --vcf final.g5mac3dp3dplm.recode.vcf --max-missing 0.95 --maf 0.05 --recode --recode-INFO-all --out final.DP3g95maf05 --min-meanDP 20
+```
+
+8. Finally, because we are analyzing several individuals, we need to apply a population specific filter. To do this we first need to create what's called a "popmap" file. This file contains two tab separated columns. Lets create one based on our data.
+
+```
+array2=($(ls *.F.cleaned.fq. | sed 's/.F.cleaned.fq.gz//g'))
+
+for i in ${array2[@]}; do
+  echo -e "${i}:${i}" | awk  '{gsub(":","\t",$0); print;}' >> popmap
+done
+awk '{split($2,a,/_/);$2=a[1]}1' popmap > popmap_final  
+sed 's/ /\t/g' popmap_final > popmap_final_TD
+
+#note: manually added _VA to HC_VA lines using nano
+```
+8a. Now we need to create 9 lists that have the individual names of each population. We can do this with the following commands that can be used for whatever the unique names of your populations might be.
+
+```
+cut -f 2 popmap_final_TD | sort | uniq > unique.txt
+
+#!/bin/bash
+while read -r i; do
+  echo $i > $i.keep
+done < unique.txt
+
+```  
+8b. We can use these files to estimate the missing data for loci in each population using vcftools.
+
+```
+array3=($(ls *.keep | sed 's'/.keep//')
+for i in ${array3[@]}; do
+  vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --keep ${i}.keep --missing-site --out ${i}
+done
+```
+8c. The output of the above commands outputs files called `*.lmiss` whose last column lists the percentage of missing data for that locus. We can merge all of these files to create a list of loci that have 10% missing data or more to remove.
+
+```
+cat CL.lmist CLP.lmiss CS.lmiss HC.lmiss HC_VA.lmiss HI.lmiss LM.lmiss SL.lmiss SM.lmiss | mawk '!/CHR/' | mawk '$6 > 0.1' | cut -f1,2 >> badloci
+
+```
+8d. Finally, we can pipe this back into VCFTools to remove any of those bad loci
+
+```
+vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --exclude-positions badloci --recode --recode-INFO-all --out total_ALLPOP.DP3g95p5maf05
+
+```
+9. Next we can apply a filter that remove sites that have reads from both strands. The filter command is going to keep loci that have over 100 times more forward alternate reads than reverse alternate reads and 100 times more forward reference reads than reverse reference reads along with the reciprocal.
+
+```
+vcffilter -f "SAF / SAR > 100 & SRF / SRR > 100 | SAR / SAF > 100 & SRR / SRF > 100" -s total_ALLPOP.DP3g95p5maf05.recode.vcf > total_ALLPOP.DP3g95p5maf05.fil1.vcf
+
+# To investigate how many reads were remove we can see how many lines remain
+mawk '!/#/' total_ALLPOP.DP3g95p5maf05.fil1.vcf | wc -l
+
+```
+10. Apply a filter to account for high coverage causing an inflated locus quality score
+
+Heng Li found that in whole genome samples, high coverage can lead to inflated locus quality scores. Based on this, Jon Puritz suggests the following filter to remove any locus that has a quality score below 1/4 of the depth. Because we are not working with RADseq data, we will not implement the second filter he suggest to recalculate mean depth.
+
+```
+vcffilter -f "QUAL / DP > 0.25" total_ALLPOP.DP3g95p5maf05.fil1.vcf > total_ALLPOP.DP3g95p5maf05.fil2.vcf
+```
+
+We now have our final filtered SNP calls that we are confident about!
+
+# STEP 12: Analyses to characterize neutral genomic variations
+
+1. Calculate the total number of variants and the number of variants within each population
+
+We can do this by using vcf-annotate with --fill-type
+```
+zcat SNP.DP3g95p5maf05.recode.vcf | vcf-annotate --fill-type | grep -oP "TYPE=\w+" | sort | uniq -c > VCF_filltype
+
+grep "snp" VCF_filltype > SNP_VCF_filltype
+```
+
+To calculate the number of unique variants we can use vcf-contrast from VCFTools. This argument is useful for looking at differences between groups of samples.
+```
+# the -n option will only print novel alleles
+#the sort option will sort the  sites by the confidence of the site being different from the child (-k5,5nr)
+vcf-contrast -n +Child -Mother,Father -d 10 -f | vcf-query -f '%CHROM %POS\t%INFO/NOVELTY\t%INFO/NOVELAL\t%INFO/NOVELGT[\t%SAMPLE %GTR %PL]\n' | sort -k3,3nr | head
+
+```
+
+2. Calculating allele frequencies and the percentage of exclusive variants
+
+2a. Calculate allele frequency
+```
+# To get the frequency of each allele over all individuals in a VCF file, you can use the -freq argument
+vcftools --vcf SNP.DP3g95p5maf05.recode.vcf --freq --out allele_freq_all
+
+# To calculate for individual populations
+
+array3=($(ls *.keep | sed 's'/.keep//')
+for i in ${array3[@]}; do
+  vcftools --vcf SNP.DP3g95p5maf05.recode.vcf--freq --keep ${i}.keep --out ${i}.allele_freq
+done
+
+```
+2b. Exclusive variants are defined as those that are polymorphic in only one population.
+We will do this using the vcftools module vcf-compare
+
+```
+#compare the vcf files using the -g option to also output summary stats
+vcf-compare -H -g A.vcf.gz B.vcf.gz C.vcf.gz
+```
+
+3. Calculate the level of nucleotide diversity using VCFTools
+
+-3a: Calculate for each population separately
+In order to reduce the computational intensity the sliding window has been set to 10,000.
+```
+array3=($(ls *.keep | sed 's'/.keep//')
+for i in ${array3[@]}; do
+  vcftools --vcf SNP.DP3g95p5maf05.recode.vcf  --keep ${i}.keep --window-pi 100000 --out = ${i.ND}
+done
+```
+
+-3b: Use R to calculate a mean pi for all individuals
+
+```
+install.packages("fields")
+library(fields)
+binstats <- stats.bin(dat$POS,dat$PI,N=100)
+matplot( binstats$centers, t(binstats$stats[ c("mean", "median","Q1", "Q3"),]), type="l",lty=c(1,2,2,2), col=c('red','blue','green','purple'), ylab="Pi diversity")
+
+```
+
+# STEP 13: Calculate the Fst across different populations
+
+Now we will calculate the Fst statistic between individuals of different populations to get a measure of population differentiation.
+```
+vcftools --vcf SNP.DP3g95p5maf05.recode.vcf --weir-fst-pop CL.txt --weir-fst-pop CLP.txt --weir-fst-pop CS.txt --weir-fst-pop HC.txt --weir-fst-pop HC_VA.txt --weir-fst-pop HI.txt --weir-fst-pop LM.txt --weir-fst-pop SL.txt --weir-fst-pop SM.txt --out Fst_all_pop
+
+
+```
+
+# STEP 14: Assess genetic structure by using a PCA through the package adegenet
+
+To carry out the code below, we need to first create a "strata" file that has three columns. The first column is the name of the individual, the second is the population, and the third is the library. We have the first two columns already in our popmap_final_TD file (though with no headings).
+
+We can add on the library type (libraryA) with the following commands
+
+```
+#create file with repeated word with same number of lines as popmap file
+printf 'LibA\n%.0s' {1..54}
+
+#paste the two together
+paste popmap_final_TD libfile > strata
+
+```
+Now we can add plot our data using adegenet in R.
+
+```
+library(adegenet)
+library(vcfR)
+library(hierfstat)
+library(ape)
+
+#loading in the vcf file
+oyster_vcf <- read.vcfR("SNP.DP3g95p5maf05.recode.vcf")
+
+# the genind object store allelic data for individuals as integer allele counts
+oyster_genind <- vcfR2genind(oyster_vcf)
+strata<- read.table("strata", header=TRUE)
+strata_df <- data.frame(strata)
+strata(oyster_genind) <- strata_df
+
+setPop(oyster_genind) <- ~Population
+
+#Test Population Structure
+fstat(oyster_genind)
+
+oyster.pairwiseFst <- pairwise.fst(oyster_genind, res.type="matrix")
+
+#We can use these genetic distance values to calculate a tree using ape
+oyster.tree <- nj(oyster.pairwiseFst)
+plot(oyster.tree, type="unr", tip.col=funky(nPop(oyster_genind)), font=2)
+annot <- round(oyster.tree$edge.length,2)
+edgelabels(annot[annot>0], which(annot>0), frame="n")
+add.scale.bar()
+
+# we can test for the presence of population structure using Goudet's *G* statistic.
+oyster.gtest <- gstat.randtest(oyster_genind)
+oyster.gtest
+
+
+```
+
+# STEP 15: Use PCAdapt to visualize sample clustering by population location
+
+We will now use PCAdapt to plot clustering of populations in R.
+
+```
+R
+library(pcadapt)
+variants <- read.pcadapt("SNP.DP3g95p5maf05.recode.vcf", type = "vcf")
+
+#In this first step pick a minimum number of possible PCs, we'll go high with 20
+PCs <- pcadapt(input = filename, K = 20)
+
+#Now we will plot the percentage of variance explained by each PC using a screeplot
+plot(PCs, option = "screeplot")
+
+#plot for the fist ten
+plot(PCs, option = "screeplot", K = 10)
+
+# Create list with population designations
+poplist.names <- c(rep("CL", 20),rep("CLP", 20),rep("CS", 20), rep("HC,20)),
+rep("HC_VA", 20), rep("HI", 20), rep("LM", 20), rep("SL", 20), rep("SM", 20))
+
+#Display individual scores on each of the PCs and produce a score plot
+plot(PCs, option = "scores", pop = poplist.names)
+#try 2 and 3
+plot(PCs, option = "scores", i = 2, j = 3, pop = poplist.names)
+#try 3 and 4
+plot(PCs, option = "scores", i = 2, j = 3, pop = poplist.names)
+
+# redo with appropriate number of PCs
+PC2<- pcadapt(variants, K=3)
+
+#output the summary statistics
+summary(PC2)
+
+#putatively investigate outliers with a Manhattan plot
+plot(PC2, option="manhattan")
+
+```
+
+4. Subset file regions using vcftools
+
+Finally we need to subset the output to only inspect the regions we care about. We can do this using vcftools. The coordinates used are listed below.
 
 $ cat GIMAP_coordinates.txt
 NC_035781.1	43704802	43757768
@@ -766,27 +1027,33 @@ NC_035783.1	41487217	42243082
 NC_035784.1	90744459	90751167
 NC_035785.1	13854692	13928162
 NC_035786.1	15027963	55588883
-NC_035787.1	6914739		72430550  6459499
+NC_035787.1	6914739		72430550
 NC_035788.1	30445429	104317686
 
 ```
 #!/bin/bash
 #SBATCH -t 100:00:00
-#SBATCH --nodes 3
+#SBATCH --nodes 1
 #SBATCH --exclusive
 #SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_output
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/subset_GIMAP_error
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/vcf_GIMAP_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/vcf_GIMAP_error
 #SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
 cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
 
 echo "START $(date)"
-module load BEDTools/2.26.0-foss-2016b
+module load VCFtools/0.1.14-foss-2017a-Perl-5.24.1
 
 F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=($)(ls *.F.bam | sed 's/.F.bam//g'))
+array1=($(ls *.F.bam | sed 's/.F.bam//g'))
 for i in ${array1[@]}; do
-  bedtools intersect -header -wa -a ${i}.bedpe -b GIMAP_coordinates.txt
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035781.1 --from-bp 43704802 --to-bp 43757768 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035781.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035783.1 --from-bp 41487217 --to-bp 42243082 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035783.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035784.1 --from-bp 90744459 --to-bp 90751167 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035784.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035785.1 --from-bp 13854692 --to-bp 13928162 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035785.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035786.1 --from-bp 15027963 --to-bp 55588883 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035786.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035787.1 --from-bp 6914739 --to-bp 72430550 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035787.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035788.1 --from-bp 30445429 --to-bp 104317686 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035788.1
   echo "done ${i}"
 done
 
@@ -794,9 +1061,6 @@ echo "done ${i}"
 
 ```
 
-4. Perform PCA to look at how the copy number variants cluster in the different populations
-
-5. Use IGV to examine
 
 
 # Works Cited
