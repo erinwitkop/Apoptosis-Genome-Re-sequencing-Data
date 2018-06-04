@@ -2,7 +2,7 @@
 
 ## Goals:
 1. Gather preliminary data on patterns of gene family variation across natural and selected populations
-of the eastern oyster for diversified gene families IAP and GIMAP, who both are functionally relevant members
+of the eastern oyster for diversified gene familie GIMAP, a functionally relevant member
 of the apoptosis pathway.
 
 2. Use sequence based approaches to confirm presence of apoptosis genes in oyster
@@ -370,165 +370,8 @@ for i in *.F.bam; do
 done
 
 ```
-# STEP 8. Perform Variant Calling with FreeBayes,
 
-Now that our final .bam files have been generated we can call variants using the program FreeBayes. Variants can be called for files individually or jointly.
-
-```
-ls *.F.bam > bamlist.txt
-```
-```
-#!/bin/bash
-#give FreeBayes a list of all the input files and call them jointly
-freebayes -f GCA_002022765.4_C_virginica-3.0_genomic.fna -L bamlist.txt >  total_SNPs_ALLPOP.vcf
-echo "done variant $(date)"
-```
-
-# STEP 9. Filter SNPs using VCFTools
-
-The following steps were adapted from an excellent protocol developed by Jon Puritz. For more detailed information please see [http://ddocent.com/filtering/](http://ddocent.com/filtering/)
-
-1. First we will use VCFTools to filter out any variants that have not been successfully genotyped to more than 50% of individuals ( `--max-missing 0.5`), those with a minor allele count of 3 (`--mac 3)`), and those with a quality score below 30 (`--minQ 30`)  
-
-```
-vcftools --vcf total_ALLPOP.vcf --max-missing 0.5 --mac 3 --minQ 20 --recode --recode-INFO-all --out total_ALLPOP.g5mac3
-
-```
-
-2. Getting rid of these first will help speed up this next command, which applies a minimum mean depth and a minimum depth for a genotype call. Genotypes will be called if they have atleast three reads.
-
-```
-vcftools --vcf total_ALLPOP.firstfilter.recode.vcf --minDP 3 --recode --recode-INFO-all --out total_ALLPOP.g5mac3dp3
-```
-
-3. Now we can remove individuals that have a lot of missing data.
-
-```
-# The output of this file will be called out.imiss
-vcftools --vcf total_ALLPOP.g5mac3dp3.recode.vcf --missing-indv
-
-```
-4. We can now plot a histogram of individuals that are missing a lot of data using the following command (taken from http://ddocent.com/filtering/ by Jon Puritz).
-
-```
-mawk '!/IN/' out.imiss | cut -f5 > totalmissing
-gnuplot << \EOF
-set terminal dumb size 120, 30
-set autoscale
-unset label
-set title "Histogram of % missing data per individual"
-set ylabel "Number of Occurrences"
-set xlabel "% of missing data"
-#set yr [0:100000]
-binwidth=0.01
-bin(x,width)=width*floor(x/width) + binwidth/2.0
-plot 'totalmissing' using (bin($1,binwidth)):(1.0) smooth freq with boxes
-pause -1
-EOF
-```
-5. We can create a list with more than 50% missing data using the following mawk command.
-```
-mawk '$5 > 0.5' out.imiss | cut -f1 > lowDP.indv
-```
-6. This can then be piped into VCFtools so that the low coverage individuals can be removed.
-```
-vcftools --vcf total_ALLPOP.g5mac3dp3.recode.vcf --remove lowDP.indv --recode --recode-INFO-all --out total_ALLPOP.g5mac3dp3dplm
-
-```
-7. Next, we need to restrict the data to those variants that are called in a high percentage of individuals using a genotype call rate of 95% (`--max-missing 0.95`) and then filter based on the mean depth of genotypes of 20% (`--min-meanDP 20`).
-```
-vcftools --vcf total_ALLPOP.g5mac3dp3dplm.recode.vcf --max-missing 0.95 --maf 0.05 --recode --recode-INFO-all --out total_ALLPOPDP3g95maf05 --min-meanDP 20
-```
-
-8. Finally, because we are analyzing several individuals, we need to apply a population specific filter. To do this we first need to create what's called a "popmap" file. This file contains two tab separated columns. Lets create one based on our data.
-
-```
-array2=($(ls *.F.cleaned.fq.gz | sed 's/.F.cleaned.fq.gz//g'))
-
-for i in ${array2[@]}; do
-  echo -e "${i}:${i}" | awk  '{gsub(":","\t",$0); print;}' >> popmap
-done
-awk '{split($2,a,/_/);$2=a[1]}1' popmap > popmap_final  
-sed 's/ /\t/g' popmap_final > popmap_final_TD
-
-#note: manually added _VA to HC_VA lines using nano
-```
-8a. Now we need to create 9 lists that have the individual names of each population. We can do this with the following commands that can be used for whatever the unique names of your populations might be.
-
-```
-cut -f 2 popmap_final_TD | sort | uniq > unique.txt
-
-#!/bin/bash
-while read -r i; do
-  echo $i > $i.keep
-done < unique.txt
-
-```  
-8b. We can use these files to estimate the missing data for loci in each population using vcftools.
-
-```
-array3=($(ls *.keep | sed 's'/.keep//')
-for i in ${array3[@]}; do
-  vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --keep ${i}.keep --missing-site --out ${i}
-done
-```
-8c. The output of the above commands outputs files called `*.lmiss` whose last column lists the percentage of missing data for that locus. We can merge all of these files to create a list of loci that have 10% missing data or more to remove.
-
-```
-cat CL.lmist CLP.lmiss CS.lmiss HC.lmiss HC_VA.lmiss HI.lmiss LM.lmiss SL.lmiss SM.lmiss | mawk '!/CHR/' | mawk '$6 > 0.1' | cut -f1,2 >> badloci
-
-```
-8d. Finally, we can pipe this back into VCFTools to remove any of those bad loci
-
-```
-vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --exclude-positions badloci --recode --recode-INFO-all --out total_ALLPOP.DP3g95p5maf05
-
-```
-9. Next we can apply a filter that remove sites that have reads from both strands. The filter command is going to keep loci that have over 100 times more forward alternate reads than reverse alternate reads and 100 times more forward reference reads than reverse reference reads along with the reciprocal.
-
-```
-vcffilter -f "SAF / SAR > 100 & SRF / SRR > 100 | SAR / SAF > 100 & SRR / SRF > 100" -s total_ALLPOP.DP3g95p5maf05.recode.vcf > total_ALLPOP.DP3g95p5maf05.fil1.vcf
-
-# To investigate how many reads were remove we can see how many lines remain
-mawk '!/#/' total_ALLPOP.DP3g95p5maf05.fil1.vcf | wc -l
-
-```
-10. Apply a filter to account for high coverage causing an inflated locus quality score
-
-Heng Li found that in whole genome samples, high coverage can lead to inflated locus quality scores. Based on this, Jon Puritz suggests the following filter to remove any locus that has a quality score below 1/4 of the depth. Because we are not working with RADseq data, we will not implement the second filter he suggest to recalculate mean depth.
-
-```
-vcffilter -f "QUAL / DP > 0.25" total_ALLPOP.DP3g95p5maf05.fil1.vcf > total_ALLPOP.DP3g95p5maf05.fil2.vcf
-```
-
-11. Apply a filter for HWE
-
-Hardy Weinberg equilibrium is also another excellent filter to remove erroneous variant calls. To do this I will implement a script written by Chris Hollenbeck
-
-```
-curl -L -O https://github.com/jpuritz/dDocent/raw/master/scripts/filter_hwe_by_pop.pl
-chmod +x filter_hwe_by_pop.pl
-```
-We can first filter by population specific HWE. To do this we need to convert our variant calls to SNPS using vcflib. The following command will do that for us.
-
-```
-vcfallelicprimitives total_ALLPOP.DP3g95p5maf05.fil2.vcf --keep-info --keep-geno > SNP.total_ALLPOP.DP3g95p5maf05.fil2.prim.vcf
-```
-
-Next, the command below will split the variant calls into SNP and indel genotypes.
-```
-vcftools --vcf SNP.total_ALLPOP.DP3g95p5maf05.fil2.prim.vcf --remove-indels --recode --recode-INFO-all --out SNP.DP3g95p5maf05
-```
-
-Now we can apply a SNP filter. We will choose to use the default Hardy Weinberg p-value of 0.001.
-
-```
-./filter_hwe_by_pop.pl -v SNP.DP3g95p5maf05.recode.vcf -p popmap_final_TD -o SNP.DP3g95p5maf05.HWE -h 0.001
-```
-
-We now have our final filtered SNP calls that we are confident about!
-
-# STEP 10: Isolate Chromosomes of Interest based on Previous knowledge of Gene Family Structure
+# STEP 8: Isolate GIMAP Gene Family Regions of Interest
 
 Preliminary Analysis of annotated GIMAP genes in the Reference Genome (.gff) reveal
 53 total GIMAP genes.
@@ -567,12 +410,8 @@ Table 2: Coordinates for GIMAP Gene Extraction on Each Chromosome
 | NC_035787.1   | CHR8              | 5914739  | 71430550  | 6914739-72430550   |
 | NC_035788.1   | CHR9              | 29445429 | 103317686 | 30445429-104317686 |
 
-1. Now we can use samtools to extract these coordinates for the GIMAP Sequences
 
-First we will extract the appropriate ranges and put them all in one file. We will put the following commands into
-a script called subset_bam.sh
-
-2. Analyze structural variants using LUMPY
+1. Analyze structural variants using LUMPY
 
 LUMPY will be used to detect structural variants and BIC-Seq2 will be used to look at copy number variants.
 
@@ -731,7 +570,6 @@ cat full_lumpy_bam.vcf \
 echo "done combine $(date)"
 
 ```
-
 
 # STEP 9. Filter VCF file to uncover structural variants across populations
 
