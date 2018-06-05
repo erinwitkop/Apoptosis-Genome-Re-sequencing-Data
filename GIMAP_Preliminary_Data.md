@@ -2,12 +2,10 @@
 
 ## Goals:
 1. Gather preliminary data on patterns of gene family variation across natural and selected populations
-of the eastern oyster for diversified gene familie GIMAP, a functionally relevant member
+of the eastern oyster for the exapnded genefamily GIMAP, a functionally relevant member
 of the apoptosis pathway.
 
-2. Use sequence based approaches to confirm presence of apoptosis genes in oyster
-
-# Data set and Additional Files Necessary to perform the analyses
+# Data set
 1. HiSeq Data Sets sequenced on an Illumina HiSeq X Ten PE150, sequenced without PCR concentration. The full sequence
 set includes data from 14 different populations from both wild and selected lines of eastern oysters.
 
@@ -571,7 +569,7 @@ echo "done combine $(date)"
 
 ```
 
-# STEP 11. Filter VCF file to uncover structural variants across populations
+# STEP 11. Filter VCF file
 
 The following steps were adapted from an excellent protocol developed by Jon Puritz. For more detailed information please see [http://ddocent.com/filtering/](http://ddocent.com/filtering/)
 We will perform all of the following commands in single bash script called vcf_filter.sh
@@ -689,10 +687,47 @@ Heng Li found that in whole genome samples, high coverage can lead to inflated l
 vcffilter -f "QUAL / DP > 0.25" final.DP3g95p5maf05.fil1.vcf > final.DP3g95p5maf05.fil2.vcf
 ```
 
-11. Subset GIMAP regions using vcftools
+# STEP 12: Use ANNOVAR to Annotate structural variants
+1. Download and install ANNOVAR on computer
 
-Finally we need to subset the output to only inspect the regions we care about. We can do this using vcftools. The coordinates used are listed below.
+2. Prepare annotation files for Crassostrea virginica, available at https://www.ncbi.nlm.nih.gov/genome/?term=txid6565[orgn]
+-Download reference genomic FASTA file
+-Download reference GFF3 format file
+-Put both in same directory
+```
+mkdir ANNOVAR_input
+```
+3. Use the gtftoGenePhred tool to convert the GFF to a GenePhred file  
 
+```
+gtfToGenePred -genePredExt ref_C_virginica-3.0_top_level.gff3 CV_refGene.txt
+```
+
+4. Generate a transcript FASTA file with the ANNOVAR provided script
+```
+perl ../retrieve_seq_from_fasta.pl --format refGene --seqfile
+  GCA_002022765.4_C_virginica-3.0_genomic.fna CV_refGene.txt --out CV_refGeneMrna.fa
+```
+Now the annotation database files are ready for use and can use protocol in Yang 2015 at 2B(ii), using '--buildver' argument set to 'CV'
+
+5. Annotate variants with the C. virginica reference genome annotation
+
+```
+perl table_annovar.pl final.DP3g95p5maf05.fil2.vcf ANNOVAR_input/ --vcfinput --outfile CV_final --buildver CV --protocol refGene --operation g
+```
+
+The final output is a text file from the previous command.
+
+6. Use table_annovar.pl to directly take VCF as input and generate a VCF_file and a tabular output file  with the INFO column containing various ANNOVAR annotations
+(see http://annovar.openbioinformatics.org/en/latest/misc/accessory/#table_annovar-automated-execution-of-multiple-annotation-tasks)
+
+table_annovar.pl final.DP3g95p5maf05.fil2.vcf ANNOVAR_input/ -buildver CV -out CVanno -remove -protocol refGene -operation g -nastring . -vcfinput
+
+7. Subset GIMAP regions of output VCF file with VCFtools
+
+The coordinates used are listed below.
+
+```
 $ cat GIMAP_coordinates.txt
 NC_035781.1	43704802	43757768
 NC_035783.1	41487217	42243082
@@ -701,6 +736,7 @@ NC_035785.1	13854692	13928162
 NC_035786.1	15027963	55588883
 NC_035787.1	6914739		72430550
 NC_035788.1	30445429	104317686
+```
 
 ```
 #!/bin/bash
@@ -717,30 +753,35 @@ echo "START $(date)"
 module load VCFtools/0.1.14-foss-2017a-Perl-5.24.1
 
 F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=($(ls *.F.bam | sed 's/.F.bam//g'))
-for i in ${array1[@]}; do
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035781.1 --from-bp 43704802 --to-bp 43757768 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035781.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035783.1 --from-bp 41487217 --to-bp 42243082 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035783.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035784.1 --from-bp 90744459 --to-bp 90751167 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035784.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035785.1 --from-bp 13854692 --to-bp 13928162 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035785.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035786.1 --from-bp 15027963 --to-bp 55588883 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035786.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035787.1 --from-bp 6914739 --to-bp 72430550 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035787.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035788.1 --from-bp 30445429 --to-bp 104317686 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035788.1
-  echo "done ${i}"
-done
+  vcftools --vcf CV_anno.vcf --chr NC_035781.1 --from-bp 43704802 --to-bp 43757768 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035781.1
+  vcftools --vcf CV_anno.vcf --chr NC_035783.1 --from-bp 41487217 --to-bp 42243082 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035783.1
+  vcftools --vcf CV_anno.vcf--chr NC_035784.1 --from-bp 90744459 --to-bp 90751167 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035784.1
+  vcftools --vcf CV_anno.vcf --chr NC_035785.1 --from-bp 13854692 --to-bp 13928162 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035785.1
+  vcftools --vcf CV_anno.vcf --chr NC_035786.1 --from-bp 15027963 --to-bp 55588883 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035786.1
+  vcftools --vcf CV_anno.vcf --chr NC_035787.1 --from-bp 6914739 --to-bp 72430550 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035787.1
+  vcftools --vcf CV_anno.vcf --chr NC_035788.1 --from-bp 30445429 --to-bp 104317686 --recode --recode-INFO-all --out CV_anno_GIMAP_subset_NC_035788.1
+
 
 echo "done ${i}"
 
 ```
 
-# STEP 12: Use ANNOVAR to map structural variants
-http://annovar.openbioinformatics.org/en/latest/user-guide/region/
-http://www.ngscourse.org/Course_Materials/variant_annotation/tutorial/annovar.html
-http://annovar.openbioinformatics.org/en/latest/user-guide/input/#annovar-input-file
-http://annovar.openbioinformatics.org/en/latest/user-guide/gene/#what-about-gff3-file-for-new-species
+# STEP 13: Identify Consensus Genotypes using SURVIVOR SVTyped files
+(https://github.com/fritzsedlazeck/SURVIVOR/wiki)
+1. Install SURVIVOR
 
-# STEP 13: Identify Consensus Genotypes between all samples for primer generation
+2. Merge all VCF files
+```
+ls *vcf > sample_files
+```
+3. Obtain a consensus call set
 
+The following command will  merge all the vcf files specified in sample_files together using a maximum allowed distance of 1kb. Furthermore we ask SURVIVOR only to report calls supported by 2 callers and they have to agree on the type (1) and on the strand (1) of the SV. Note you can change this behavior by altering the numbers from 1 to e.g. 0. In addition, we told SURVIVOR to only compare SV that are at least 30bp long and print the output in sample_merged.vcf.
+
+```
+./SURVIVOR merge sample_files 1000 2 1 1 0 30 sample_merged.vcf
+```
+4.  Use genomic coordinates mapping to GIMAP genes above to identify GIMAP genes in merged set
 
 
 # STEP 14: Analyses to characterize structural variants mapped
@@ -752,14 +793,8 @@ We can do this by using vcf-annotate with --fill-type
 zcat SNP.DP3g95p5maf05.recode.vcf | vcf-annotate --fill-type | grep -oP "TYPE=\w+" | sort | uniq -c > VCF_filltype
 
 grep "snp" VCF_filltype > SNP_VCF_filltype
-```
-
-To calculate the number of unique variants we can use vcf-contrast from VCFTools. This argument is useful for looking at differences between groups of samples.
-```
-# the -n option will only print novel alleles
-#the sort option will sort the  sites by the confidence of the site being different from the child (-k5,5nr)
-vcf-contrast -n +Child -Mother,Father -d 10 -f | vcf-query -f '%CHROM %POS\t%INFO/NOVELTY\t%INFO/NOVELAL\t%INFO/NOVELGT[\t%SAMPLE %GTR %PL]\n' | sort -k3,3nr | head
-
+grep "INDEL" VCF_filltype > indel_VCF_filltype
+grep "dup" VCF_filltype > dup_VCF_filltype
 ```
 
 2. Calculating allele frequencies and the percentage of exclusive variants
@@ -767,13 +802,13 @@ vcf-contrast -n +Child -Mother,Father -d 10 -f | vcf-query -f '%CHROM %POS\t%INF
 2a. Calculate allele frequency
 ```
 # To get the frequency of each allele over all individuals in a VCF file, you can use the -freq argument
-vcftools --vcf SNP.DP3g95p5maf05.recode.vcf --freq --out allele_freq_all
+vcftools --vcf final.DP3g95p5maf05.recode.vcf --freq --out allele_freq_all
 
 # To calculate for individual populations
 
 array3=($(ls *.keep | sed 's'/.keep//')
 for i in ${array3[@]}; do
-  vcftools --vcf SNP.DP3g95p5maf05.recode.vcf--freq --keep ${i}.keep --out ${i}.allele_freq
+  vcftools --vcf final.DP3g95p5maf05.recode.vcf--freq --keep ${i}.keep --out ${i}.allele_freq
 done
 
 ```
@@ -792,7 +827,7 @@ In order to reduce the computational intensity the sliding window has been set t
 ```
 array3=($(ls *.keep | sed 's'/.keep//')
 for i in ${array3[@]}; do
-  vcftools --vcf SNP.DP3g95p5maf05.recode.vcf  --keep ${i}.keep --window-pi 100000 --out = ${i.ND}
+  vcftools --vcf final.DP3g95p5maf05.recode.vcf  --keep ${i}.keep --window-pi 100000 --out = ${i.ND}
 done
 ```
 
@@ -907,19 +942,28 @@ plot(PC2, option="manhattan")
 
 ```
 
-
-# Works Cited
-
+# Bibliography and Works Cited
+-Website about dDocent filtering
 https://github.com/jpuritz/BIO_594_2018/blob/master/Exercises/Week10/EecSeq_code.md
+-References about SV detection
 https://bpa-csiro-workshops.github.io/btp-manuals-md/modules/cancer-module-snv/snv/
-https://davetang.org/wiki/tiki-index.php?page=SAMTools#Creating_FASTQ_files_from_a_BAM_file
 http://bioinformatics-ca.github.io/bioinformatics_for_cancer_genomics_2016/rearrangement
 https://bcbio.wordpress.com/tag/lumpy/
 http://ngseasy.readthedocs.io/en/latest/containerized/ngseasy_dockerfiles/ngseasy_lumpy/README/
 https://mississippi.snv.jussieu.fr/u/drosofff/w/constructed-lumpy-workflow-imported-from-uploaded-file
 https://raw.githubusercontent.com/bioinformatics-ca/2015_workshops/master/BiCG_2015/BiCG_2015_Module3_Lab2.txt
-#vcftools isec code help
+Brandler, W. M., D. Antaki, M. Gujral, A. Noor, G. Rosanio, T. R. Chapman, D. J. Barrera, G. N. Lin, D. Malhotra, A. C. Watts, L. C. Wong, J. A. Estabillo, T. E.   Gadomski, O. Hong, K. V. F. Fajardo, A. Bhandari, R. Owen, M. Baughn, J. Yuan, T. Solomon, A. G. Moyzis, M. S. Maile, S. J. Sanders, G. E. Reiner, K. K. Vaux, C.   M. Strom, K. Zhang, A. R. Muotri, N. Akshoomoff, S. M. Leal, K. Pierce, E. Courchesne, L. M. Iakoucheva, C. Corsello, and J. Sebat. 2016. Frequency and Complexity of de Novo Structural Mutation in Autism. Am. J. Hum. Genet. 98:667–679. Available from: http://dx.doi.org/10.1016/j.ajhg.2016.02.018
+
+Greer, S. U., L. D. Nadauld, B. T. Lau, J. Chen, C. Wood-Bouwens, J. M. Ford, C. J. Kuo, and H. P. Ji. 2017. Linked read sequencing resolves complex genomic rearrangements in gastric cancer metastases. Genome Med. 9:1–17.
+
+-vcftools isec code help
 https://www.biostars.org/p/140263/
+-ANNOVAR help
+http://annovar.openbioinformatics.org/en/latest/user-guide/region/
+http://www.ngscourse.org/Course_Materials/variant_annotation/tutorial/annovar.html
+http://annovar.openbioinformatics.org/en/latest/user-guide/input/#annovar-input-file
+http://annovar.openbioinformatics.org/en/latest/user-guide/gene/#what-about-gff3-file-for-new-species
+Yang, H., and K. Wang. 2015. Genomic variant annotation and prioritization with ANNOVAR and wANNOVAR. Nat. Protoc. 10:1556–1566. Available from: http://dx.doi.org/10.1038/nprot.2015.105
 
 MultiQC: Summarize analysis results for multiple tools and samples in a single report
 Philip Ewels, Måns Magnusson, Sverker Lundin and Max Käller
@@ -927,6 +971,5 @@ Bioinformatics (2016)
 doi: 10.1093/bioinformatics/btw354
 PMID: 27312411
 
-Greer, S. U., L. D. Nadauld, B. T. Lau, J. Chen, C. Wood-Bouwens, J. M. Ford, C. J. Kuo, and H. P. Ji. 2017. Linked read sequencing resolves complex genomic rearrangements in gastric cancer metastases. Genome Med. 9:1–17.
 
 https://www.biostars.org/p/75489/
