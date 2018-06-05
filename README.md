@@ -1,6 +1,8 @@
 # Apoptosis-Genome-Resequencing-Data
 6/5/2018
+
 Erin Roberts
+
 Dr. Gomez-Chiarri Lab, University of Rhode Island, Kingston, RI, USA. 
 
 This repository contains code I used to process whole genome resequencing data to characterize structural variation in the GIMAP gene family of the eastern oyster, *Crassostrea virginica*.
