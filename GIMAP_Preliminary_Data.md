@@ -657,7 +657,7 @@ done < unique.txt
 ```
 array3=($(ls *.keep | sed 's'/.keep//')
 for i in ${array3[@]}; do
-  vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --keep ${i}.keep --missing-site --out ${i}
+  vcftools --vcf final.DP3g95maf05.recode.vcf --keep ${i}.keep --missing-site --out ${i}
 done
 ```
 8c. The output of the above commands outputs files called `*.lmiss` whose last column lists the percentage of missing data for that locus. We can merge all of these files to create a list of loci that have 10% missing data or more to remove.
@@ -669,16 +669,16 @@ cat CL.lmist CLP.lmiss CS.lmiss HC.lmiss HC_VA.lmiss HI.lmiss LM.lmiss SL.lmiss 
 8d. Finally, we can pipe this back into VCFTools to remove any of those bad loci
 
 ```
-vcftools --vcf total_ALLPOP.DP3g95maf05.recode.vcf --exclude-positions badloci --recode --recode-INFO-all --out total_ALLPOP.DP3g95p5maf05
+vcftools --vcf final.DP3g95maf05.recode.vcf --exclude-positions badloci --recode --recode-INFO-all --out final.DP3g95p5maf05
 
 ```
 9. Next we can apply a filter that remove sites that have reads from both strands. The filter command is going to keep loci that have over 100 times more forward alternate reads than reverse alternate reads and 100 times more forward reference reads than reverse reference reads along with the reciprocal.
 
 ```
-vcffilter -f "SAF / SAR > 100 & SRF / SRR > 100 | SAR / SAF > 100 & SRR / SRF > 100" -s total_ALLPOP.DP3g95p5maf05.recode.vcf > total_ALLPOP.DP3g95p5maf05.fil1.vcf
+vcffilter -f "SAF / SAR > 100 & SRF / SRR > 100 | SAR / SAF > 100 & SRR / SRF > 100" -s final.DP3g95p5maf05.recode.vcf > final.DP3g95p5maf05.fil1.vcf
 
 # To investigate how many reads were remove we can see how many lines remain
-mawk '!/#/' total_ALLPOP.DP3g95p5maf05.fil1.vcf | wc -l
+mawk '!/#/' final.DP3g95p5maf05.fil1.vcf | wc -l
 
 ```
 10. Apply a filter to account for high coverage causing an inflated locus quality score
@@ -686,12 +686,64 @@ mawk '!/#/' total_ALLPOP.DP3g95p5maf05.fil1.vcf | wc -l
 Heng Li found that in whole genome samples, high coverage can lead to inflated locus quality scores. Based on this, Jon Puritz suggests the following filter to remove any locus that has a quality score below 1/4 of the depth. Because we are not working with RADseq data, we will not implement the second filter he suggest to recalculate mean depth.
 
 ```
-vcffilter -f "QUAL / DP > 0.25" total_ALLPOP.DP3g95p5maf05.fil1.vcf > total_ALLPOP.DP3g95p5maf05.fil2.vcf
+vcffilter -f "QUAL / DP > 0.25" final.DP3g95p5maf05.fil1.vcf > final.DP3g95p5maf05.fil2.vcf
 ```
 
-We now have our final filtered SNP calls that we are confident about!
+11. Subset GIMAP regions using vcftools
 
-# STEP 12: Analyses to characterize neutral genomic variations
+Finally we need to subset the output to only inspect the regions we care about. We can do this using vcftools. The coordinates used are listed below.
+
+$ cat GIMAP_coordinates.txt
+NC_035781.1	43704802	43757768
+NC_035783.1	41487217	42243082
+NC_035784.1	90744459	90751167
+NC_035785.1	13854692	13928162
+NC_035786.1	15027963	55588883
+NC_035787.1	6914739		72430550
+NC_035788.1	30445429	104317686
+
+```
+#!/bin/bash
+#SBATCH -t 100:00:00
+#SBATCH --nodes 1
+#SBATCH --exclusive
+#SBATCH --mail-user=erin_roberts@my.uri.edu
+#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/vcf_GIMAP_output
+#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/vcf_GIMAP_error
+#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
+cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+
+echo "START $(date)"
+module load VCFtools/0.1.14-foss-2017a-Perl-5.24.1
+
+F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
+array1=($(ls *.F.bam | sed 's/.F.bam//g'))
+for i in ${array1[@]}; do
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035781.1 --from-bp 43704802 --to-bp 43757768 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035781.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035783.1 --from-bp 41487217 --to-bp 42243082 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035783.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035784.1 --from-bp 90744459 --to-bp 90751167 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035784.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035785.1 --from-bp 13854692 --to-bp 13928162 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035785.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035786.1 --from-bp 15027963 --to-bp 55588883 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035786.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035787.1 --from-bp 6914739 --to-bp 72430550 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035787.1
+  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035788.1 --from-bp 30445429 --to-bp 104317686 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035788.1
+  echo "done ${i}"
+done
+
+echo "done ${i}"
+
+```
+
+# STEP 12: Use ANNOVAR to map structural variants
+http://annovar.openbioinformatics.org/en/latest/user-guide/region/
+http://www.ngscourse.org/Course_Materials/variant_annotation/tutorial/annovar.html
+http://annovar.openbioinformatics.org/en/latest/user-guide/input/#annovar-input-file
+http://annovar.openbioinformatics.org/en/latest/user-guide/gene/#what-about-gff3-file-for-new-species
+
+# STEP 13: Identify Consensus Genotypes between all samples for primer generation
+
+
+
+# STEP 14: Analyses to characterize structural variants mapped
 
 1. Calculate the total number of variants and the number of variants within each population
 
@@ -754,7 +806,7 @@ matplot( binstats$centers, t(binstats$stats[ c("mean", "median","Q1", "Q3"),]), 
 
 ```
 
-# STEP 13: Calculate the Fst across different populations
+# STEP 15: Calculate the Fst across different populations
 
 Now we will calculate the Fst statistic between individuals of different populations to get a measure of population differentiation.
 ```
@@ -763,7 +815,7 @@ vcftools --vcf SNP.DP3g95p5maf05.recode.vcf --weir-fst-pop CL.txt --weir-fst-pop
 
 ```
 
-# STEP 14: Assess genetic structure by using a PCA through the package adegenet
+# STEP 16: Assess genetic structure by using a PCA through the package adegenet
 
 To carry out the code below, we need to first create a "strata" file that has three columns. The first column is the name of the individual, the second is the population, and the third is the library. We have the first two columns already in our popmap_final_TD file (though with no headings).
 
@@ -815,7 +867,7 @@ oyster.gtest
 
 ```
 
-# STEP 15: Use PCAdapt to visualize sample clustering by population location
+# STEP 17: Use PCAdapt to visualize sample clustering by population location
 
 We will now use PCAdapt to plot clustering of populations in R.
 
@@ -854,51 +906,6 @@ summary(PC2)
 plot(PC2, option="manhattan")
 
 ```
-
-4. Subset file regions using vcftools
-
-Finally we need to subset the output to only inspect the regions we care about. We can do this using vcftools. The coordinates used are listed below.
-
-$ cat GIMAP_coordinates.txt
-NC_035781.1	43704802	43757768
-NC_035783.1	41487217	42243082
-NC_035784.1	90744459	90751167
-NC_035785.1	13854692	13928162
-NC_035786.1	15027963	55588883
-NC_035787.1	6914739		72430550
-NC_035788.1	30445429	104317686
-
-```
-#!/bin/bash
-#SBATCH -t 100:00:00
-#SBATCH --nodes 1
-#SBATCH --exclusive
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-#SBATCH -o /data3/marine_diseases_lab/erin/CV_Gen_Reseq/vcf_GIMAP_output
-#SBATCH -e /data3/marine_diseases_lab/erin/CV_Gen_Reseq/vcf_GIMAP_error
-#SBATCH -D /data3/marine_diseases_lab/erin/CV_Gen_Reseq/
-cd=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-
-echo "START $(date)"
-module load VCFtools/0.1.14-foss-2017a-Perl-5.24.1
-
-F=/data3/marine_diseases_lab/erin/CV_Gen_Reseq
-array1=($(ls *.F.bam | sed 's/.F.bam//g'))
-for i in ${array1[@]}; do
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035781.1 --from-bp 43704802 --to-bp 43757768 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035781.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035783.1 --from-bp 41487217 --to-bp 42243082 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035783.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035784.1 --from-bp 90744459 --to-bp 90751167 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035784.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035785.1 --from-bp 13854692 --to-bp 13928162 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035785.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035786.1 --from-bp 15027963 --to-bp 55588883 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035786.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035787.1 --from-bp 6914739 --to-bp 72430550 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035787.1
-  vcftools --vcf ${i}.sv.gt.vcf --chr NC_035788.1 --from-bp 30445429 --to-bp 104317686 --recode --recode-INFO-all --out ${i}_GIMAP_subset_NC_035788.1
-  echo "done ${i}"
-done
-
-echo "done ${i}"
-
-```
-
 
 
 # Works Cited
