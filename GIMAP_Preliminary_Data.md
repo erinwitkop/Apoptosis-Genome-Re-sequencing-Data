@@ -244,9 +244,7 @@ done'
 ```
 
 # Step 5. Read Mapping to Reference using BWA-MEM
-BWA-MEM is recommended for longer sequences that range from 70bp to 1Mbp. It is recommended over BWA-SW and BWA-backtrak because it is faster and more accurate.
-
-The reference file being used is the eastern oyster reference mRNA from NCBI: GCF_002022765.2_C_virginica-3.0_rna.fna. Using this file means that any aligned genes will have the gene information attached.
+BWA-MEM is recommended for longer sequences that range from 70bp to 1Mbp.
 
 From here down the codes are only presented for the natural population files. The same analysis was repeated for the selected populations.
 
